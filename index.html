@@ -877,15 +877,31 @@ function enableNotifications() {
   }
   Notification.requestPermission().then(function(permission) {
     refreshNotifToggle();
-    if (permission !== 'granted') return;
+    if (permission !== 'granted') {
+      alert("Permission refusée par le navigateur (" + permission + ").");
+      return;
+    }
     navigator.serviceWorker.ready.then(function(registration) {
       var messaging = firebase.messaging();
       messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration }).then(function(token) {
-        if (token) db.ref('fcmTokens/' + currentUser.id).set(token);
+        if (!token) {
+          alert("Aucun token reçu de Firebase (cause inconnue).");
+          return;
+        }
+        db.ref('fcmTokens/' + currentUser.id).set(token).then(function() {
+          alert("Notifications activées avec succès !");
+          refreshNotifToggle();
+        }).catch(function(err) {
+          alert("Erreur en sauvegardant dans Firebase : " + (err && err.message || err));
+        });
       }).catch(function(err) {
-        console.error('Erreur token FCM :', err);
+        alert("Erreur lors de la récupération du token FCM : " + (err && err.message || err));
       });
+    }).catch(function(err) {
+      alert("Erreur Service Worker : " + (err && err.message || err));
     });
+  }).catch(function(err) {
+    alert("Erreur de permission : " + (err && err.message || err));
   });
 }
 
