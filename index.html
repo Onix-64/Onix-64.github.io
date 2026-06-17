@@ -853,15 +853,33 @@ function refreshNotifToggle() {
     if (sub) sub.textContent = 'Non disponible sur ce navigateur';
     return;
   }
-  if (Notification.permission === 'granted') {
-    toggle.classList.add('on');
-    if (sub) sub.textContent = 'Activées sur cet appareil';
-  } else if (Notification.permission === 'denied') {
+  if (Notification.permission === 'denied') {
     toggle.classList.remove('on');
     if (sub) sub.textContent = 'Bloquées — à réactiver dans les réglages du téléphone';
-  } else {
+    return;
+  }
+  if (Notification.permission !== 'granted') {
     toggle.classList.remove('on');
     if (sub) sub.textContent = 'Pour recevoir le rappel du dimanche';
+    return;
+  }
+  // L'autorisation du téléphone est déjà accordée, mais elle est valable pour
+  // tout l'appareil — il faut vérifier que CE joueur précis (celui connecté
+  // actuellement) a bien un token enregistré dans Firebase.
+  toggle.classList.remove('on');
+  if (sub) sub.textContent = 'Vérification...';
+  if (currentUser && !currentUser.isAdmin) {
+    db.ref('fcmTokens/' + currentUser.id).once('value').then(function(snap) {
+      if (snap.exists() && snap.val()) {
+        toggle.classList.add('on');
+        if (sub) sub.textContent = 'Activées pour ' + formatPrenom(currentUser.prenom);
+      } else {
+        toggle.classList.remove('on');
+        if (sub) sub.textContent = 'Autorisation donnée — tape pour activer pour toi';
+      }
+    }).catch(function() {
+      if (sub) sub.textContent = 'Pour recevoir le rappel du dimanche';
+    });
   }
 }
 
