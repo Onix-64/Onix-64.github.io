@@ -30,6 +30,7 @@
 
     #pin-screen { position:fixed; inset:0; z-index:500; background:var(--bg); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; }
     #pin-screen.hidden { display:none; }
+    .card.hidden { display:none; }
     .pin-crest { font-size:40px; margin-bottom:16px; }
     .pin-welcome { font-size:22px; font-weight:800; color:var(--text); margin-bottom:6px; }
     .pin-sub { font-size:13px; color:var(--text2); margin-bottom:28px; text-align:center; }
@@ -364,15 +365,27 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="card-notifications">
       <div class="card-lbl">Notifications</div>
       <div class="toggle-row" style="cursor:pointer" onclick="enableNotifications()">
         <div><div class="tgl-lbl">Notifications push</div><div class="tgl-sub" id="notif-status-sub">Pour recevoir le rappel du dimanche</div></div>
         <button class="toggle" id="notif-toggle"></button>
       </div>
-      <div class="toggle-row"><div><div class="tgl-lbl">Rappel hebdo</div><div class="tgl-sub">Dimanche, vers 12h-13h</div></div></div>
-      <div class="toggle-row"><div><div class="tgl-lbl">Relance si non voté</div><div class="tgl-sub">Le même jour, ~3h plus tard</div></div></div>
-      <div class="toggle-row"><div><div class="tgl-lbl">Alerte remplaçants</div><div class="tgl-sub">Si moins de 8 confirmés</div></div><button class="toggle on" onclick="this.classList.toggle('on')"></button></div>
+    </div>
+
+    <div class="card hidden" id="card-admin">
+      <div class="card-lbl">Administration</div>
+      <div class="toggle-row" style="cursor:pointer" onclick="adminResetVotes()">
+        <div><div class="tgl-lbl">Réinitialiser les votes</div><div class="tgl-sub">Efface les votes du match en cours</div></div>
+        <span style="color:var(--red);font-size:18px">›</span>
+      </div>
+      <div class="toggle-row" style="cursor:pointer" onclick="adminToggleNotifPause()">
+        <div><div class="tgl-lbl">Suspendre les notifications</div><div class="tgl-sub" id="admin-pause-sub">Pour tout le monde (ex: vacances)</div></div>
+        <button class="toggle" id="admin-pause-toggle"></button>
+      </div>
+      <div class="card-lbl" style="margin-top:18px">Joueurs connectés</div>
+      <div class="tgl-sub" id="admin-connected-count" style="margin-bottom:6px">Chargement...</div>
+      <div id="admin-connected-list"></div>
     </div>
 
     <div class="card">
@@ -858,7 +871,69 @@ function saveAndClose(id) {
 }
 
 // ══ NOTIFICATIONS PUSH ══
-function renderNotifs() { refreshNotifToggle(); }
+function renderNotifs() {
+  refreshNotifToggle();
+  var adminCard = document.getElementById('card-admin');
+  var notifCard = document.getElementById('card-notifications');
+  if (currentUser && currentUser.isAdmin) {
+    if (adminCard) adminCard.classList.remove('hidden');
+    if (notifCard) notifCard.classList.add('hidden');
+    renderAdminPanel();
+  } else {
+    if (adminCard) adminCard.classList.add('hidden');
+    if (notifCard) notifCard.classList.remove('hidden');
+  }
+}
+
+function renderAdminPanel() {
+  db.ref('settings/notificationsPaused').once('value').then(function(snap) {
+    var paused = !!snap.val();
+    var toggle = document.getElementById('admin-pause-toggle');
+    var sub = document.getElementById('admin-pause-sub');
+    if (toggle) toggle.classList.toggle('on', paused);
+    if (sub) sub.textContent = paused ? 'Actuellement suspendues pour tout le monde' : "Pour tout le monde (ex: vacances)";
+  });
+
+  db.ref('connectedPlayers').once('value').then(function(snap) {
+    var connected = snap.val() || {};
+    var roster = PIN_PLAYERS.filter(function(p){ return !p.isAdmin; });
+    var nbConnected = roster.filter(function(p){ return connected[p.id]; }).length;
+    var countEl = document.getElementById('admin-connected-count');
+    var listEl = document.getElementById('admin-connected-list');
+    if (countEl) countEl.textContent = nbConnected + ' / ' + roster.length + " ont ouvert l'appli au moins une fois";
+    if (listEl) {
+      listEl.innerHTML = roster.map(function(p) {
+        var isConnected = !!connected[p.id];
+        var color = isConnected ? 'var(--green)' : 'var(--text2)';
+        var statusText = isConnected ? 'Connecté' : 'Pas encore';
+        return '<div class="toggle-row"><div class="tgl-lbl">' + formatName(p.prenom, p.nom) + '</div>' +
+               '<span style="color:' + color + ';font-size:13px;font-weight:600">' + statusText + '</span></div>';
+      }).join('');
+    }
+  });
+}
+
+function adminResetVotes() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  var m0 = planning[0];
+  var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (!confirm('Réinitialiser tous les votes pour le match du ' + dateLabel + ' ? Cette action est irréversible.')) return;
+  db.ref('matches/' + getMatchId(m0) + '/votes').remove().then(function() {
+    alert('Votes réinitialisés pour le ' + dateLabel + '.');
+  }).catch(function(err) {
+    alert('Erreur : ' + (err && err.message || err));
+  });
+}
+
+function adminToggleNotifPause() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  db.ref('settings/notificationsPaused').once('value').then(function(snap) {
+    var newVal = !snap.val();
+    db.ref('settings/notificationsPaused').set(newVal).then(function() {
+      renderAdminPanel();
+    });
+  });
+}
 
 function refreshNotifToggle() {
   var toggle = document.getElementById('notif-toggle');
@@ -992,6 +1067,9 @@ function loginUser(user) {
   var badge = document.getElementById('user-badge');
   badge.textContent = user.isAdmin ? 'ADMIN' : formatName(user.prenom, user.nom);
   listenVotes(getMatchId(planning[0]));
+  if (!user.isAdmin) {
+    db.ref('connectedPlayers/' + user.id).set(firebase.database.ServerValue.TIMESTAMP);
+  }
 }
 
 
