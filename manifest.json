@@ -1,6 +1,6 @@
 {
   "name": "Foot du Mardi",
-  "short_name": "Foot Mardi",
+  "short_name": "Soccer",
   "description": "Gestion des présences et sondages pour le foot du mardi soir",
   "start_url": "/",
   "display": "standalone",
