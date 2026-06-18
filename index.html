@@ -445,10 +445,26 @@ var db = firebase.database();
 var VAPID_KEY = "BGNFp1e53PDLUN-wtvD8U-HLBrlpXfVpr9GDsE5WLH5DNvTa2gnE_cGdx_ZXjYYG8FWjkhxp1SrQfdQX-5iPkow";
 
 // Si l'appli est déjà ouverte au moment de la réception, Firebase ne montre pas
-// de notification système automatiquement (normal) — on logue juste l'événement.
+// de notification système automatiquement — on l'affiche nous-mêmes, avec les
+// mêmes boutons d'action que lorsque l'appli est fermée (voir sw.js).
 if (firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported()) {
   firebase.messaging().onMessage(function(payload) {
-    console.log('Notification reçue (appli ouverte) :', payload);
+    var data = payload.data || {};
+    var notif = payload.notification || {};
+    var inPlanning = data.inPlanning === '1';
+    var actions = inPlanning
+      ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
+      : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }];
+    navigator.serviceWorker.ready.then(function(registration) {
+      registration.showNotification(notif.title, {
+        body: notif.body,
+        icon: 'icons/icon-192.png',
+        badge: 'icons/icon-192.png',
+        tag: data.matchId ? ('foot-mardi-' + data.matchId) : undefined,
+        data: data,
+        actions: actions
+      });
+    });
   });
 }
 
