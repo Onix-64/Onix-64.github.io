@@ -88,7 +88,8 @@
     .player-row:last-child { border-bottom:none; }
     .avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; }
     .av-goal { background:var(--gold-bg) !important; border:1.5px solid var(--gold-dim); color:var(--gold) !important; }
-    .p-name { font-size:14px; font-weight:700; color:var(--text); }
+    .p-name { font-size:14px; font-weight:700; color:var(--text); line-height:1.25; }
+    .p-name-nom { font-size:11px; font-weight:600; color:var(--text3); letter-spacing:0.3px; }
     .p-sub { font-size:11px; color:var(--text3); margin-top:1px; }
     .p-info { flex:1; }
 
@@ -149,6 +150,8 @@
     .fiche-select { font-size:14px; font-weight:500; color:var(--text); border:none; outline:none; background:transparent; width:100%; font-family:inherit; appearance:none; }
     .fiche-select option { background:var(--bg2); }
     .save-btn { width:100%; padding:14px; background:var(--gold); color:var(--bg); border:none; border-radius:var(--r-md); font-size:15px; font-weight:800; cursor:pointer; margin-top:16px; }
+    .fiche-section { background:var(--bg3); border:0.5px solid var(--border2); border-radius:var(--r-md); padding:4px 14px; margin-bottom:14px; }
+    .fiche-section-lbl { font-size:10px; font-weight:800; color:var(--text3); text-transform:uppercase; letter-spacing:0.5px; padding-top:12px; }
 
 
 
@@ -185,7 +188,8 @@
     .player-col-item:active { opacity: 0.7; }
     .player-col-av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
     .player-col-info { flex: 1; text-align: center; }
-    .player-col-name { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.2; }
+    .player-col-name { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.25; }
+    .player-col-nom { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.3px; }
     .player-col-role { font-size: 10px; color: var(--text3); }
     /* ── THEME CLAIR ── */
     body.theme-light {
@@ -549,13 +553,11 @@ const PLAYERS = [
   {id:17, nom:'Caballero', prenom:'Alex',       role:'gardien', color:'#e8c14a'}
 ];
 
-const POSTES = ['Gardien','Defenseur','Milieu','Ailier','Attaquant'];
-const DEFAULT_POSTES = {1:'Milieu',2:'Attaquant',3:'Defenseur',4:'Milieu',5:'Defenseur',6:'Ailier',7:'Milieu',8:'Attaquant',9:'Ailier',10:'Milieu',11:'Defenseur',12:'Attaquant',13:'Milieu',14:'Ailier',15:'Gardien',16:'Gardien',17:'Gardien'};
 const DEFAULT_CLUBS = {};
 
 var pdata = {};
 PLAYERS.forEach(function(p) {
-  pdata[p.id] = {bio:'', ddn:'', pied:'Droit', club:DEFAULT_CLUBS[p.id]||'', poste:DEFAULT_POSTES[p.id]||'Milieu'};
+  pdata[p.id] = {surnoms:'', ddn:'', pied:'Droit', club:DEFAULT_CLUBS[p.id]||'', disponibilites:''};
 });
 
 // ══ PLANNING ══
@@ -796,7 +798,7 @@ function openMatch(idx) {
   document.getElementById('mm-title').textContent = ds.charAt(0).toUpperCase()+ds.slice(1);
   document.getElementById('mm-field').innerHTML = m.players.map(function(p) {
     return '<div class="p-chip"><div class="chip-av" style="background:'+p.color+';color:#0d0d0d">'+ini(p)+'</div>'
-      + '<div><div class="chip-name">'+formatName(p.prenom,p.nom)+'</div><div class="chip-role">'+pdata[p.id].poste+'</div></div></div>';
+      + '<div><div class="chip-name">'+formatName(p.prenom,p.nom)+'</div><div class="chip-role">Joueur</div></div></div>';
   }).join('');
   document.getElementById('mm-goals').innerHTML = m.goalkeepers.map(function(p) {
     return '<div class="p-chip" style="border-color:var(--gold-dim)"><div class="chip-av av-goal" style="width:30px;height:30px;font-size:10px">'+ini(p)+'</div>'
@@ -815,7 +817,7 @@ function renderPlayers() {
     + field.map(function(p) {
         return '<div class="player-col-item" onclick="openFiche('+p.id+')">'
           + '<div class="player-col-av" style="background:'+p.color+';color:#0d0d0d">'+ini(p)+'</div>'
-          + '<div class="player-col-info"><div class="player-col-name">'+formatName(p.prenom,p.nom)+'</div>'
+          + '<div class="player-col-info"><div class="player-col-name">'+formatPrenom(p.prenom)+'</div><div class="player-col-nom">'+p.nom.toUpperCase()+'</div>'
           + '<div class="player-col-role">Joueur</div></div>'
           + '</div>';
       }).join('')
@@ -835,7 +837,7 @@ function pRow(p) {
   var isGoal = p.role==='gardien';
   return '<div class="player-row" onclick="openFiche('+p.id+')">'
     + '<div class="avatar '+(isGoal?'av-goal':'')+'" style="'+(isGoal?'':'background:'+p.color+';color:#0d0d0d')+'">'+ini(p)+'</div>'
-    + '<div class="p-info"><div class="p-name">'+formatName(p.prenom,p.nom)+'</div><div class="p-sub">'+(isGoal?'Gardien':'Joueur')+'</div></div>'
+    + '<div class="p-info"><div class="p-name">'+formatPrenom(p.prenom)+'</div><div class="p-name-nom">'+p.nom.toUpperCase()+'</div><div class="p-sub">'+(isGoal?'Gardien':'Joueur')+'</div></div>'
     + '<span style="color:var(--text3);font-size:18px">&#8250;</span></div>';
 }
 
@@ -844,35 +846,74 @@ function openFiche(id) {
   var d = pdata[id];
   var isGoal = p.role==='gardien';
   var matchCount = planning.reduce(function(a,m){return a+(m.players.concat(m.goalkeepers).some(function(x){return x.id===id;})?1:0);},0);
-  var BM = {present:['b-present','PRESENT'],pd:['b-pd','PAS DISPO'],sb:['b-sb','DISPO SI BESOIN'],wait:['b-wait','DOIT REPONDRE']};
-  var bm = BM[votes[id]||'wait'];
   var avStyle = isGoal ? '' : 'background:'+p.color+';color:#0d0d0d';
   document.getElementById('fiche-head').innerHTML =
     '<button class="close-btn" onclick="saveAndClose('+id+')">&#10005;</button>'
     + '<div style="text-align:center;padding-top:8px">'
     + '<div class="fiche-av '+(isGoal?'av-goal':'')+'" style="'+avStyle+'">'+ini(p)+'</div>'
     + '<div class="fiche-name">'+formatName(p.prenom,p.nom)+'</div>'
-    + '<div class="fiche-role">'+(isGoal?'Gardien':d.poste)+'</div></div>';
+    + '<div class="fiche-role">'+(isGoal?'Gardien':'Joueur')+'</div></div>';
   document.getElementById('fiche-body').innerHTML =
-    '<div class="fiche-stats">'
-    + '<div class="fiche-stat"><div class="fiche-stat-n">'+matchCount+'</div><div class="fiche-stat-l">Matchs prevus</div></div>'
-    + '<div class="fiche-stat"><span class="badge '+bm[0]+'" style="font-size:10px">'+bm[1]+'</span><div class="fiche-stat-l" style="margin-top:6px">Vote actuel</div></div>'
-    + '</div>'
+    '<div class="fiche-section">'
+    + '<div class="fiche-section-lbl">Profil</div>'
     + '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><input class="fiche-input" type="date" id="f-ddn" value="'+d.ddn+'" /></div>'
-    + '<div class="fiche-field"><div class="fiche-lbl">Biographie</div><input class="fiche-input" type="text" id="f-bio" value="'+d.bio+'" placeholder="Joueur depuis 2018..." /></div>'
+    + '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><input class="fiche-input" type="text" id="f-surnoms" value="'+d.surnoms+'" placeholder="Rousse, Nono..." /></div>'
     + '<div class="fiche-field"><div class="fiche-lbl">Pied prefere</div><select class="fiche-select" id="f-pied">'+['Droit','Gauche','Les deux'].map(function(v){return '<option '+(d.pied===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
     + '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><input class="fiche-input" type="text" id="f-club" value="'+d.club+'" placeholder="PSG, OM..." /></div>'
-    + '<div class="fiche-field"><div class="fiche-lbl">Poste</div><select class="fiche-select" id="f-poste">'+POSTES.map(function(v){return '<option '+(d.poste===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
+    + '<div class="fiche-field"><div class="fiche-lbl">Disponibilites</div><input class="fiche-input" type="text" id="f-dispo" value="'+d.disponibilites+'" placeholder="Tous les mardis..." /></div>'
+    + '</div>'
+    + '<div class="fiche-section" style="padding:14px;">'
+    + '<div class="fiche-section-lbl" style="padding-top:0;margin-bottom:10px;">Statistiques</div>'
+    + '<div class="fiche-stats" style="margin:0;">'
+    + '<div class="fiche-stat"><div class="fiche-stat-n">'+matchCount+'</div><div class="fiche-stat-l">Matchs prevus</div></div>'
+    + '<div class="fiche-stat"><div class="fiche-stat-n" id="f-matchs-joues">&hellip;</div><div class="fiche-stat-l">Matchs joues</div></div>'
+    + '</div>'
+    + '</div>'
     + '<button class="save-btn" onclick="saveAndClose('+id+')">Enregistrer</button>';
   document.getElementById('ov-player').classList.add('open');
+  computeMatchsJoues(id, function(n) {
+    var el = document.getElementById('f-matchs-joues');
+    if (el) el.textContent = n;
+  });
+}
+
+// Compte, parmi les matchs deja joues (date passee), combien de fois le
+// joueur a effectivement fait partie du groupe final des 10 retenus
+// (present d'office, ou dispo-si-besoin pioche pour completer le groupe).
+function computeMatchsJoues(playerId, callback) {
+  db.ref('matches').once('value').then(function(snap) {
+    var allMatches = snap.val() || {};
+    var today = new Date(); today.setHours(0,0,0,0);
+    var count = 0;
+    Object.keys(allMatches).forEach(function(matchId) {
+      var d = new Date(matchId + 'T00:00:00');
+      if (isNaN(d.getTime()) || d >= today) return;
+      var votesData = (allMatches[matchId] && allMatches[matchId].votes) || {};
+      var present = [], sb = [];
+      Object.keys(votesData).forEach(function(pid) {
+        var entry = votesData[pid];
+        if (!entry || !entry.choice) return;
+        var pObj = PLAYERS.find(function(x){return x.id===Number(pid);});
+        if (!pObj) return;
+        if (entry.choice === 'present') present.push(pObj);
+        else if (entry.choice === 'sb') sb.push({p:pObj, ts: entry.timestamp || Infinity});
+      });
+      sb.sort(function(a,b){return a.ts-b.ts;});
+      var needed = Math.max(0, 10 - present.length);
+      var fillers = sb.slice(0, needed).map(function(x){return x.p;});
+      var finalGroup = present.concat(fillers);
+      if (finalGroup.some(function(p){return p.id===playerId;})) count++;
+    });
+    callback(count);
+  }).catch(function() { callback(0); });
 }
 
 function saveAndClose(id) {
   pdata[id].ddn   = document.getElementById('f-ddn').value   || pdata[id].ddn;
-  pdata[id].bio   = document.getElementById('f-bio').value   || pdata[id].bio;
+  pdata[id].surnoms = document.getElementById('f-surnoms').value || pdata[id].surnoms;
   pdata[id].pied  = document.getElementById('f-pied').value  || pdata[id].pied;
   pdata[id].club  = document.getElementById('f-club').value  || pdata[id].club;
-  pdata[id].poste = document.getElementById('f-poste').value || pdata[id].poste;
+  pdata[id].disponibilites = document.getElementById('f-dispo').value || pdata[id].disponibilites;
   closeOv('ov-player');
   renderHome();
   if (document.getElementById('screen-players').classList.contains('active')) renderPlayers();
