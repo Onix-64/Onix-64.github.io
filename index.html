@@ -89,7 +89,6 @@
     .avatar { width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; flex-shrink:0; }
     .av-goal { background:var(--gold-bg) !important; border:1.5px solid var(--gold-dim); color:var(--gold) !important; }
     .p-name { font-size:14px; font-weight:700; color:var(--text); line-height:1.25; }
-    .p-name-nom { font-size:11px; font-weight:600; color:var(--text3); letter-spacing:0.3px; }
     .p-sub { font-size:11px; color:var(--text3); margin-top:1px; }
     .p-info { flex:1; }
 
@@ -123,11 +122,11 @@
     .modal { background:var(--bg2); border-radius:var(--r-lg) var(--r-lg) 0 0; border-top:0.5px solid var(--border); width:100%; max-width:480px; max-height:88vh; overflow-y:auto; padding-bottom:24px; animation:slideUp 0.25s ease; }
     @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
     .modal-handle { width:36px; height:4px; background:var(--border2); border-radius:2px; margin:12px auto 0; }
-    .modal-head { padding:18px 20px 16px; border-bottom:0.5px solid var(--border); }
+    .modal-head { padding:18px 20px 16px; border-bottom:0.5px solid var(--border); position:relative; }
     .modal-eyebrow { font-size:10px; color:var(--gold); font-weight:700; text-transform:uppercase; letter-spacing:1.2px; margin-bottom:4px; }
     .modal-title { font-size:19px; font-weight:800; color:var(--text); }
     .modal-sub { font-size:13px; color:var(--text2); margin-top:3px; }
-    .close-btn { float:right; background:var(--bg3); border:0.5px solid var(--border2); color:var(--text2); width:28px; height:28px; border-radius:50%; font-size:14px; cursor:pointer; line-height:28px; text-align:center; }
+    .close-btn { position:absolute; top:18px; right:20px; background:var(--bg3); border:0.5px solid var(--border2); color:var(--text2); width:28px; height:28px; border-radius:50%; font-size:14px; cursor:pointer; line-height:28px; text-align:center; }
     .modal-body { padding:16px 20px; }
     .players-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .p-chip { display:flex; align-items:center; gap:8px; background:var(--bg3); border-radius:var(--r-md); padding:9px 10px; border:0.5px solid var(--border2); }
@@ -135,7 +134,10 @@
     .chip-name { font-size:12px; font-weight:700; color:var(--text); }
     .chip-role { font-size:10px; color:var(--text3); }
 
-    .fiche-av { width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; margin:0 auto 12px; border:2px solid var(--gold-dim); }
+    .fiche-av { width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; margin:0; border:2px solid var(--gold-dim); }
+    .fiche-av-wrap { position:relative; width:70px; height:70px; margin:0 auto 12px; cursor:pointer; }
+    .fiche-av-edit { position:absolute; bottom:-2px; right:-2px; width:24px; height:24px; border-radius:50%; background:var(--gold); display:flex; align-items:center; justify-content:center; font-size:11px; border:2px solid var(--bg2); }
+    .fiche-photo-remove { font-size:11px; color:var(--red); text-align:center; margin-top:8px; cursor:pointer; text-decoration:underline; }
     .fiche-name { font-size:20px; font-weight:800; color:var(--text); text-align:center; }
     .fiche-role { font-size:11px; color:var(--gold); text-transform:uppercase; text-align:center; margin-top:4px; }
     .fiche-stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0; }
@@ -189,7 +191,6 @@
     .player-col-av { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
     .player-col-info { flex: 1; text-align: center; }
     .player-col-name { font-size: 12px; font-weight: 700; color: var(--text); line-height: 1.25; }
-    .player-col-nom { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.3px; }
     .player-col-role { font-size: 10px; color: var(--text3); }
     /* ── THEME CLAIR ── */
     body.theme-light {
@@ -414,8 +415,8 @@
     <div class="modal-handle"></div>
     <div class="modal-head">
       <button class="close-btn" onclick="closeOv('ov-match')">✕</button>
-      <div class="modal-eyebrow">Match du mardi</div>
-      <div class="modal-title" id="mm-title">—</div>
+      <div class="modal-eyebrow" style="padding-right:36px">Match du mardi</div>
+      <div class="modal-title" id="mm-title" style="padding-right:36px">—</div>
       <div class="modal-sub">19h30 à 20h30 · Complexe INDOOR64</div>
     </div>
     <div class="modal-body">
@@ -557,8 +558,29 @@ const DEFAULT_CLUBS = {};
 
 var pdata = {};
 PLAYERS.forEach(function(p) {
-  pdata[p.id] = {surnoms:'', ddn:'', pied:'Droit', club:DEFAULT_CLUBS[p.id]||'', disponibilites:''};
+  pdata[p.id] = {surnoms:'', ddn:'', pied:'Droit', club:DEFAULT_CLUBS[p.id]||'', disponibilites:'', photo:''};
 });
+
+// Les fiches joueurs (infos + photo) sont synchronisees via Firebase afin de
+// persister entre les sessions et d'etre visibles par tout le monde.
+function loadPlayerProfiles() {
+  db.ref('playerProfiles').once('value').then(function(snap) {
+    var saved = snap.val() || {};
+    Object.keys(saved).forEach(function(pid) {
+      if (pdata[pid]) {
+        var entry = saved[pid] || {};
+        pdata[pid].surnoms = entry.surnoms || '';
+        pdata[pid].ddn = entry.ddn || '';
+        pdata[pid].pied = entry.pied || 'Droit';
+        pdata[pid].club = entry.club || '';
+        pdata[pid].disponibilites = entry.disponibilites || '';
+        pdata[pid].photo = entry.photo || '';
+      }
+    });
+    if (document.getElementById('screen-players').classList.contains('active')) renderPlayers();
+  }).catch(function(err) { console.error('Chargement profils :', err); });
+}
+loadPlayerProfiles();
 
 // ══ PLANNING ══
 function nextTuesdays(n) {
@@ -817,7 +839,7 @@ function renderPlayers() {
     + field.map(function(p) {
         return '<div class="player-col-item" onclick="openFiche('+p.id+')">'
           + '<div class="player-col-av" style="background:'+p.color+';color:#0d0d0d">'+ini(p)+'</div>'
-          + '<div class="player-col-info"><div class="player-col-name">'+formatPrenom(p.prenom)+'</div><div class="player-col-nom">'+p.nom.toUpperCase()+'</div>'
+          + '<div class="player-col-info"><div class="player-col-name">'+formatName(p.prenom,p.nom)+'</div>'
           + '<div class="player-col-role">Joueur</div></div>'
           + '</div>';
       }).join('')
@@ -837,7 +859,7 @@ function pRow(p) {
   var isGoal = p.role==='gardien';
   return '<div class="player-row" onclick="openFiche('+p.id+')">'
     + '<div class="avatar '+(isGoal?'av-goal':'')+'" style="'+(isGoal?'':'background:'+p.color+';color:#0d0d0d')+'">'+ini(p)+'</div>'
-    + '<div class="p-info"><div class="p-name">'+formatPrenom(p.prenom)+'</div><div class="p-name-nom">'+p.nom.toUpperCase()+'</div><div class="p-sub">'+(isGoal?'Gardien':'Joueur')+'</div></div>'
+    + '<div class="p-info"><div class="p-name">'+formatName(p.prenom,p.nom)+'</div><div class="p-sub">'+(isGoal?'Gardien':'Joueur')+'</div></div>'
     + '<span style="color:var(--text3);font-size:18px">&#8250;</span></div>';
 }
 
@@ -846,13 +868,19 @@ function openFiche(id) {
   var d = pdata[id];
   var isGoal = p.role==='gardien';
   var matchCount = planning.reduce(function(a,m){return a+(m.players.concat(m.goalkeepers).some(function(x){return x.id===id;})?1:0);},0);
-  var avStyle = isGoal ? '' : 'background:'+p.color+';color:#0d0d0d';
   document.getElementById('fiche-head').innerHTML =
     '<button class="close-btn" onclick="saveAndClose('+id+')">&#10005;</button>'
     + '<div style="text-align:center;padding-top:8px">'
-    + '<div class="fiche-av '+(isGoal?'av-goal':'')+'" style="'+avStyle+'">'+ini(p)+'</div>'
+    + '<div class="fiche-av-wrap" onclick="document.getElementById(\'f-photo-input\').click()">'
+    + '<div class="fiche-av-inner" id="fiche-av-inner"></div>'
+    + '<div class="fiche-av-edit">&#128247;</div>'
+    + '</div>'
+    + '<input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhotoSelect('+id+',this)" />'
     + '<div class="fiche-name">'+formatName(p.prenom,p.nom)+'</div>'
-    + '<div class="fiche-role">'+(isGoal?'Gardien':'Joueur')+'</div></div>';
+    + '<div class="fiche-role">'+(isGoal?'Gardien':'Joueur')+'</div>'
+    + '<div class="fiche-photo-remove" id="fiche-photo-remove" onclick="removePhoto('+id+')" style="display:none">Retirer la photo</div>'
+    + '</div>';
+  renderFicheAvatar(id);
   document.getElementById('fiche-body').innerHTML =
     '<div class="fiche-section">'
     + '<div class="fiche-section-lbl">Profil</div>'
@@ -875,6 +903,57 @@ function openFiche(id) {
     var el = document.getElementById('f-matchs-joues');
     if (el) el.textContent = n;
   });
+}
+
+// Affiche soit la photo de profil (si presente), soit les initiales par defaut.
+function renderFicheAvatar(id) {
+  var p = PLAYERS.find(function(x){return x.id===id;});
+  var d = pdata[id];
+  var isGoal = p.role==='gardien';
+  var avStyle = isGoal ? '' : 'background:'+p.color+';color:#0d0d0d';
+  var inner = document.getElementById('fiche-av-inner');
+  if (!inner) return;
+  var removeLink = document.getElementById('fiche-photo-remove');
+  if (d.photo) {
+    inner.className = 'fiche-av';
+    inner.style = 'background-image:url(' + d.photo + ');background-size:cover;background-position:center;';
+    inner.textContent = '';
+    if (removeLink) removeLink.style.display = 'block';
+  } else {
+    inner.className = 'fiche-av ' + (isGoal ? 'av-goal' : '');
+    inner.style = avStyle;
+    inner.textContent = ini(p);
+    if (removeLink) removeLink.style.display = 'none';
+  }
+}
+
+// Lit le fichier choisi, le recadre en carre et le redimensionne cote client
+// (limite la taille stockee dans Firebase) avant de l'enregistrer en apercu.
+function handlePhotoSelect(id, inputEl) {
+  var file = inputEl.files && inputEl.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var SIZE = 320;
+      var canvas = document.createElement('canvas');
+      canvas.width = SIZE; canvas.height = SIZE;
+      var ctx = canvas.getContext('2d');
+      var side = Math.min(img.width, img.height);
+      var sx = (img.width - side) / 2, sy = (img.height - side) / 2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+      pdata[id].photo = canvas.toDataURL('image/jpeg', 0.85);
+      renderFicheAvatar(id);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(id) {
+  pdata[id].photo = '';
+  renderFicheAvatar(id);
 }
 
 // Compte, parmi les matchs deja joues (date passee), combien de fois le
@@ -914,6 +993,7 @@ function saveAndClose(id) {
   pdata[id].pied  = document.getElementById('f-pied').value  || pdata[id].pied;
   pdata[id].club  = document.getElementById('f-club').value  || pdata[id].club;
   pdata[id].disponibilites = document.getElementById('f-dispo').value || pdata[id].disponibilites;
+  db.ref('playerProfiles/' + id).set(pdata[id]).catch(function(err) { console.error('Sauvegarde profil :', err); });
   closeOv('ov-player');
   renderHome();
   if (document.getElementById('screen-players').classList.contains('active')) renderPlayers();
