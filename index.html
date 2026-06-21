@@ -134,9 +134,9 @@
     .chip-name { font-size:12px; font-weight:700; color:var(--text); }
     .chip-role { font-size:10px; color:var(--text3); }
 
-    .fiche-av { width:140px; height:140px; border-radius:var(--r-lg); display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:800; margin:0; border:2px solid var(--gold-dim); }
-    .fiche-av-wrap { position:relative; width:140px; height:140px; margin:0 auto 12px; cursor:pointer; }
-    .fiche-av-edit { position:absolute; bottom:-4px; right:-4px; width:34px; height:34px; border-radius:50%; background:var(--gold); display:flex; align-items:center; justify-content:center; font-size:16px; border:2px solid var(--bg2); }
+    .fiche-av { width:280px; height:280px; border-radius:var(--r-lg); display:flex; align-items:center; justify-content:center; font-size:64px; font-weight:800; margin:0; border:2px solid var(--gold-dim); }
+    .fiche-av-wrap { position:relative; width:280px; height:280px; margin:0 auto 12px; cursor:pointer; }
+    .fiche-av-edit { position:absolute; bottom:-4px; right:-4px; width:44px; height:44px; border-radius:50%; background:var(--gold); display:flex; align-items:center; justify-content:center; font-size:20px; border:2px solid var(--bg2); }
     .fiche-photo-remove { font-size:11px; color:var(--red); text-align:center; margin-top:8px; cursor:pointer; text-decoration:underline; }
     .fiche-name { font-size:20px; font-weight:800; color:var(--text); text-align:center; }
     .fiche-role { font-size:11px; color:var(--gold); text-transform:uppercase; text-align:center; margin-top:4px; }
@@ -468,14 +468,13 @@ var VAPID_KEY = "BGNFp1e53PDLUN-wtvD8U-HLBrlpXfVpr9GDsE5WLH5DNvTa2gnE_cGdx_ZXjYY
 if (firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported()) {
   firebase.messaging().onMessage(function(payload) {
     var data = payload.data || {};
-    var notif = payload.notification || {};
     var inPlanning = data.inPlanning === '1';
     var actions = inPlanning
       ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
       : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }];
     navigator.serviceWorker.ready.then(function(registration) {
-      registration.showNotification(notif.title, {
-        body: notif.body,
+      registration.showNotification(data.title || 'Foot du mardi', {
+        body: data.body || '',
         icon: 'icons/icon-192.png',
         badge: 'icons/icon-192.png',
         tag: data.matchId ? ('foot-mardi-' + data.matchId) : undefined,
@@ -936,7 +935,7 @@ function handlePhotoSelect(id, inputEl) {
   reader.onload = function(e) {
     var img = new Image();
     img.onload = function() {
-      var SIZE = 500;
+      var SIZE = 600;
       var canvas = document.createElement('canvas');
       canvas.width = SIZE; canvas.height = SIZE;
       var ctx = canvas.getContext('2d');

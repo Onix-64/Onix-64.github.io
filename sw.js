@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foot-mardi-v21';
+const CACHE_NAME = 'foot-mardi-v22';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png', '/pin-ball-dark-v2.png', '/pin-ball-light.png'];
 
 self.addEventListener('install', event => {
@@ -45,14 +45,13 @@ const messaging = firebase.messaging();
 // pour pouvoir y ajouter des boutons d'action adaptés à chaque joueur.
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
-  const notif = payload.notification || {};
   const inPlanning = data.inPlanning === '1';
   const actions = inPlanning
     ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
     : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }];
 
-  self.registration.showNotification(notif.title, {
-    body: notif.body,
+  self.registration.showNotification(data.title || 'Foot du mardi', {
+    body: data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: data.matchId ? ('foot-mardi-' + data.matchId) : undefined,
