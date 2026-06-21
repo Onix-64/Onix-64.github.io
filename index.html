@@ -291,34 +291,37 @@
     </div>
     <div class="card" id="vote-card" style="margin-bottom:12px;">
       <div id="vote-subtitle" style="font-size:12px;color:var(--text2);margin-bottom:6px;text-align:center;"></div>
-      <div id="my-vote-status" style="text-align:center;margin:8px 0 10px;font-size:13px;color:var(--text2);min-height:36px;display:flex;align-items:center;justify-content:center;font-weight:600;">Vous n'avez pas encore voté</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-        <button class="vote-choice-btn" id="vbtn-present" onclick="castVote('present')">
-          <div style="margin-bottom:4px;display:flex;justify-content:center;">
-            <div style="width:28px;height:28px;background:#1a9e5c;border-radius:5px;display:flex;align-items:center;justify-content:center;">
-              <svg width="16" height="16" viewBox="0 0 16 16"><polyline points="3,8 6,12 13,4" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div id="vote-pending-msg" style="display:none;text-align:center;padding:14px 4px;font-size:13px;color:var(--text2);line-height:1.5;"></div>
+      <div id="vote-buttons-wrap">
+        <div id="my-vote-status" style="text-align:center;margin:8px 0 10px;font-size:13px;color:var(--text2);min-height:36px;display:flex;align-items:center;justify-content:center;font-weight:600;">Vous n'avez pas encore voté</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <button class="vote-choice-btn" id="vbtn-present" onclick="castVote('present')">
+            <div style="margin-bottom:4px;display:flex;justify-content:center;">
+              <div style="width:28px;height:28px;background:#1a9e5c;border-radius:5px;display:flex;align-items:center;justify-content:center;">
+                <svg width="16" height="16" viewBox="0 0 16 16"><polyline points="3,8 6,12 13,4" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              </div>
             </div>
-          </div>
-          <div style="font-size:11px;font-weight:800;">PRÉSENT</div>
-        </button>
-        <button class="vote-choice-btn" id="vbtn-pd" onclick="castVote('pd')">
-          <div style="margin-bottom:4px;display:flex;justify-content:center;">
-            <div style="width:28px;height:28px;background:#c0392b;border-radius:5px;display:flex;align-items:center;justify-content:center;">
-              <svg width="16" height="16" viewBox="0 0 16 16"><line x1="3" y1="3" x2="13" y2="13" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="13" y1="3" x2="3" y2="13" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+            <div style="font-size:11px;font-weight:800;">PRÉSENT</div>
+          </button>
+          <button class="vote-choice-btn" id="vbtn-pd" onclick="castVote('pd')">
+            <div style="margin-bottom:4px;display:flex;justify-content:center;">
+              <div style="width:28px;height:28px;background:#c0392b;border-radius:5px;display:flex;align-items:center;justify-content:center;">
+                <svg width="16" height="16" viewBox="0 0 16 16"><line x1="3" y1="3" x2="13" y2="13" stroke="white" stroke-width="2.5" stroke-linecap="round"/><line x1="13" y1="3" x2="3" y2="13" stroke="white" stroke-width="2.5" stroke-linecap="round"/></svg>
+              </div>
             </div>
-          </div>
-          <div style="font-size:11px;font-weight:800;">PAS DISPO</div>
-        </button>
-        <button class="vote-choice-btn" id="vbtn-sb" onclick="castVote('sb')">
-          <div style="margin-bottom:4px;display:flex;justify-content:center;">
-            <div style="width:28px;height:28px;background:#e8c14a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#0d0d0d;">?</div>
-          </div>
-          <div style="font-size:11px;font-weight:800;">DISPO SI BESOIN</div>
-        </button>
+            <div style="font-size:11px;font-weight:800;">PAS DISPO</div>
+          </button>
+          <button class="vote-choice-btn" id="vbtn-sb" onclick="castVote('sb')">
+            <div style="margin-bottom:4px;display:flex;justify-content:center;">
+              <div style="width:28px;height:28px;background:#e8c14a;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#0d0d0d;">?</div>
+            </div>
+            <div style="font-size:11px;font-weight:800;">DISPO SI BESOIN</div>
+          </button>
+        </div>
       </div>
     </div>
     <div class="card">
-      <div class="card-lbl">Sondage en cours</div>
+      <div class="card-lbl" id="vote-bars-label">Sondage en cours</div>
       <div id="vote-bars"></div>
     </div>
     <div class="card">
@@ -343,6 +346,14 @@
       <div class="sec-sub">Appuyez sur un joueur pour sa fiche</div>
     </div>
     <div class="card" id="players-list"></div>
+  </div>
+
+  <div class="screen" id="screen-results">
+    <div class="sec-head">
+      <div class="sec-title">Résultats</div>
+      <div class="sec-sub">Appuyez sur un match pour saisir son résultat</div>
+    </div>
+    <div id="results-list"></div>
   </div>
 
   <div class="screen" id="screen-notifs">
@@ -407,6 +418,7 @@
   <button class="nav-btn active" onclick="showScreen('home',this)"><span class="nav-icon">🏠</span>Accueil<div class="nav-ind"></div></button>
   <button class="nav-btn" onclick="showScreen('planning',this)"><span class="nav-icon">📅</span>Planning<div class="nav-ind"></div></button>
   <button class="nav-btn" onclick="showScreen('players',this)"><span class="nav-icon">👥</span>Effectif<div class="nav-ind"></div></button>
+  <button class="nav-btn" id="nav-results" style="display:none" onclick="showScreen('results',this)"><span class="nav-icon">🏆</span>Résultats<div class="nav-ind"></div></button>
   <button class="nav-btn" onclick="showScreen('notifs',this)"><span class="nav-icon">⚙️</span>Réglages<div class="nav-ind"></div></button>
 </nav>
 
@@ -433,6 +445,18 @@
     <div class="modal-handle"></div>
     <div id="fiche-head" class="modal-head"></div>
     <div class="modal-body" id="fiche-body"></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-result" onclick="closeOv('ov-result')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <button class="close-btn" onclick="closeOv('ov-result')">&#10005;</button>
+      <div class="modal-eyebrow" style="padding-right:36px">Résultat du match</div>
+      <div class="modal-title" id="res-title" style="padding-right:36px">—</div>
+    </div>
+    <div class="modal-body" id="res-body"></div>
   </div>
 </div>
 
@@ -580,11 +604,15 @@ function loadPlayerProfiles() {
   }).catch(function(err) { console.error('Chargement profils :', err); });
 }
 loadPlayerProfiles();
+setInterval(function() {
+  if (typeof renderHome === 'function') renderHome();
+}, 5 * 60 * 1000);
 
 // ══ PLANNING ══
 function nextTuesdays(n) {
   var d = new Date();
-  var diff = (2 - d.getDay() + 7) % 7 || 7;
+  var diff = (2 - d.getDay() + 7) % 7;
+  if (diff === 0 && d.getHours() >= 18) diff = 7;
   d.setDate(d.getDate() + diff);
   var arr = [];
   for (var i = 0; i < n; i++) {
@@ -633,6 +661,8 @@ var planning = nextTuesdays(12).map(function(date) {
 var votes = {};
 var voteTimestamps = {};
 var votesRef = null; // référence Firebase actuellement écoutée
+var matchNotifiedAt = null; // null tant que la notif hebdo n'a pas été envoyée pour ce match
+var notifiedRef = null;
 
 function getMatchId(m) { return dateKey(m.date); }
 
@@ -658,6 +688,15 @@ function listenVotes(matchId) {
   }, function(err) {
     console.error('Firebase (votes) :', err);
   });
+
+  if (notifiedRef) notifiedRef.off();
+  notifiedRef = db.ref('matches/' + matchId + '/notifiedAt');
+  notifiedRef.on('value', function(snapshot) {
+    matchNotifiedAt = snapshot.val() || null;
+    renderHome();
+  }, function(err) {
+    console.error('Firebase (notifiedAt) :', err);
+  });
 }
 
 function ini(p) { return (p.prenom[0] + p.nom[0]).toUpperCase(); }
@@ -672,6 +711,28 @@ function renderHome() {
     if (C[v] !== undefined) C[v]++; else C.wait++;
   });
   C.wait = all.filter(function(p){ return !votes[p.id] || votes[p.id]==='wait'; }).length;
+
+  // ── Etat du sondage : verrouille le vote tant que la notif hebdo n'a pas
+  // ete envoyee, puis le ferme le jour du match a partir de 18h ──
+  var voteCutoff = new Date(m.date);
+  voteCutoff.setHours(18,0,0,0);
+  var nowTime = new Date();
+  var pollLabel = document.getElementById('vote-bars-label');
+  var pendingMsg = document.getElementById('vote-pending-msg');
+  var buttonsWrap = document.getElementById('vote-buttons-wrap');
+  if (!matchNotifiedAt) {
+    if (pollLabel) pollLabel.textContent = 'SONDAGE A VENIR';
+    if (pendingMsg) { pendingMsg.style.display = 'block'; pendingMsg.textContent = "Le sondage n'est pas encore lancé pour ce match. Reviens un peu plus tard !"; }
+    if (buttonsWrap) buttonsWrap.style.display = 'none';
+  } else if (nowTime < voteCutoff) {
+    if (pollLabel) pollLabel.textContent = 'SONDAGE EN COURS';
+    if (pendingMsg) pendingMsg.style.display = 'none';
+    if (buttonsWrap) buttonsWrap.style.display = 'block';
+  } else {
+    if (pollLabel) pollLabel.textContent = 'SONDAGE TERMINE';
+    if (pendingMsg) { pendingMsg.style.display = 'block'; pendingMsg.textContent = 'Le sondage est terminé pour ce match.'; }
+    if (buttonsWrap) buttonsWrap.style.display = 'none';
+  }
 
   var ds = m.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   document.getElementById('banner-date').textContent = ds.charAt(0).toUpperCase()+ds.slice(1);
@@ -955,6 +1016,25 @@ function removePhoto(id) {
   renderFicheAvatar(id);
 }
 
+// Calcule, a partir des votes bruts d'un match, le groupe final retenu
+// (les PRESENT d'office, completes par les DISPO SI BESOIN les plus rapides
+// jusqu'a 10). Reutilise pour les stats joueur et l'onglet Resultats.
+function computeFinalGroupFromVotes(votesData) {
+  var present = [], sb = [];
+  Object.keys(votesData || {}).forEach(function(pid) {
+    var entry = votesData[pid];
+    if (!entry || !entry.choice) return;
+    var pObj = PLAYERS.find(function(x){return x.id===Number(pid);});
+    if (!pObj) return;
+    if (entry.choice === 'present') present.push(pObj);
+    else if (entry.choice === 'sb') sb.push({p:pObj, ts: entry.timestamp || Infinity});
+  });
+  sb.sort(function(a,b){return a.ts-b.ts;});
+  var needed = Math.max(0, 10 - present.length);
+  var fillers = sb.slice(0, needed).map(function(x){return x.p;});
+  return present.concat(fillers);
+}
+
 // Compte, parmi les matchs deja joues (date passee), combien de fois le
 // joueur a effectivement fait partie du groupe final des 10 retenus
 // (present d'office, ou dispo-si-besoin pioche pour completer le groupe).
@@ -967,19 +1047,7 @@ function computeMatchsJoues(playerId, callback) {
       var d = new Date(matchId + 'T00:00:00');
       if (isNaN(d.getTime()) || d >= today) return;
       var votesData = (allMatches[matchId] && allMatches[matchId].votes) || {};
-      var present = [], sb = [];
-      Object.keys(votesData).forEach(function(pid) {
-        var entry = votesData[pid];
-        if (!entry || !entry.choice) return;
-        var pObj = PLAYERS.find(function(x){return x.id===Number(pid);});
-        if (!pObj) return;
-        if (entry.choice === 'present') present.push(pObj);
-        else if (entry.choice === 'sb') sb.push({p:pObj, ts: entry.timestamp || Infinity});
-      });
-      sb.sort(function(a,b){return a.ts-b.ts;});
-      var needed = Math.max(0, 10 - present.length);
-      var fillers = sb.slice(0, needed).map(function(x){return x.p;});
-      var finalGroup = present.concat(fillers);
+      var finalGroup = computeFinalGroupFromVotes(votesData);
       if (finalGroup.some(function(p){return p.id===playerId;})) count++;
     });
     callback(count);
@@ -996,6 +1064,192 @@ function saveAndClose(id) {
   closeOv('ov-player');
   renderHome();
   if (document.getElementById('screen-players').classList.contains('active')) renderPlayers();
+}
+
+// ══ RESULTATS (admin) ══
+// Liste tous les mardis deja joues (presents dans matches/ et/ou results/),
+// du plus recent au plus ancien, avec un resume du resultat s'il est saisi.
+function renderResultsList() {
+  var listEl = document.getElementById('results-list');
+  if (!listEl) return;
+  listEl.innerHTML = '<div class="card"><div class="tgl-sub">Chargement...</div></div>';
+  Promise.all([
+    db.ref('matches').once('value'),
+    db.ref('results').once('value')
+  ]).then(function(snaps) {
+    var allMatches = snaps[0].val() || {};
+    var allResults = snaps[1].val() || {};
+    var today = new Date(); today.setHours(0,0,0,0);
+    var ids = {};
+    Object.keys(allMatches).forEach(function(k){ ids[k] = true; });
+    Object.keys(allResults).forEach(function(k){ ids[k] = true; });
+    var pastIds = Object.keys(ids).filter(function(matchId) {
+      var d = new Date(matchId + 'T00:00:00');
+      return !isNaN(d.getTime()) && d < today;
+    }).sort(function(a,b){ return b.localeCompare(a); });
+
+    if (!pastIds.length) {
+      listEl.innerHTML = '<div class="card"><div class="tgl-sub">Aucun match passé pour le moment.</div></div>';
+      return;
+    }
+
+    listEl.innerHTML = pastIds.map(function(matchId) {
+      var d = new Date(matchId + 'T00:00:00');
+      var ds = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+      ds = ds.charAt(0).toUpperCase() + ds.slice(1);
+      var res = allResults[matchId];
+      var scoreText = (res && res.scoreA !== undefined && res.scoreA !== null && res.scoreA !== '')
+        ? ('Score : ' + res.scoreA + ' - ' + res.scoreB)
+        : 'Résultat à renseigner';
+      var scoreColor = (res && res.scoreA !== undefined && res.scoreA !== null && res.scoreA !== '') ? 'var(--green)' : 'var(--text3)';
+      return '<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="openResultEditor(\''+matchId+'\')">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;">'
+        + '<div><div style="font-weight:700;font-size:14px;">'+ds+'</div>'
+        + '<div style="font-size:12px;color:'+scoreColor+';font-weight:600;margin-top:2px;">'+scoreText+'</div></div>'
+        + '<span style="color:var(--text3);font-size:18px;">&#8250;</span>'
+        + '</div></div>';
+    }).join('');
+  }).catch(function(err) {
+    console.error('Chargement resultats :', err);
+    listEl.innerHTML = '<div class="card"><div class="tgl-sub">Erreur de chargement.</div></div>';
+  });
+}
+
+var resultGuestCounter = 0;
+
+// Ouvre l'editeur d'un match : pre-rempli avec le groupe issu du sondage,
+// ou avec le resultat deja enregistre s'il existe.
+function openResultEditor(matchId) {
+  var d = new Date(matchId + 'T00:00:00');
+  var ds = d.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('res-title').textContent = ds.charAt(0).toUpperCase() + ds.slice(1);
+  document.getElementById('res-body').innerHTML = '<div class="tgl-sub">Chargement...</div>';
+  document.getElementById('ov-result').classList.add('open');
+
+  Promise.all([
+    db.ref('matches/' + matchId + '/votes').once('value'),
+    db.ref('results/' + matchId).once('value')
+  ]).then(function(snaps) {
+    var votesData = snaps[0].val() || {};
+    var saved = snaps[1].val() || null;
+    var group = computeFinalGroupFromVotes(votesData);
+    resultGuestCounter = 0;
+    renderResultEditorBody(matchId, group, saved);
+  }).catch(function(err) {
+    console.error('Chargement match :', err);
+    document.getElementById('res-body').innerHTML = '<div class="tgl-sub">Erreur de chargement.</div>';
+  });
+}
+
+function teamSelectHTML(selectId, currentVal) {
+  var opts = [['A','Equipe A'],['B','Equipe B'],['none',"N'a pas joué"]];
+  return '<select class="fiche-select" id="'+selectId+'" style="text-align:right;width:auto;flex-shrink:0;">'
+    + opts.map(function(o){ return '<option value="'+o[0]+'" '+(currentVal===o[0]?'selected':'')+'>'+o[1]+'</option>'; }).join('')
+    + '</select>';
+}
+
+function renderResultEditorBody(matchId, group, saved) {
+  var assignments = (saved && saved.assignments) || {};
+  var guests = (saved && saved.guests) || [];
+  var scoreA = (saved && saved.scoreA !== undefined) ? saved.scoreA : '';
+  var scoreB = (saved && saved.scoreB !== undefined) ? saved.scoreB : '';
+
+  var rowsHTML = group.map(function(p, idx) {
+    var def = assignments[p.id] || (idx % 2 === 0 ? 'A' : 'B');
+    return '<div class="fiche-field" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
+      + '<div style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+formatName(p.prenom,p.nom)+'</div>'
+      + teamSelectHTML('res-team-'+p.id, def)
+      + '</div>';
+  }).join('');
+
+  var guestsHTML = '<div id="res-guests-list">'
+    + guests.map(function(g) { return guestRowHTML(g.uid, g.name, g.team); }).join('')
+    + '</div>';
+
+  document.getElementById('res-body').innerHTML =
+    '<div class="fiche-section">'
+    + '<div class="fiche-section-lbl">Groupe (selon le sondage)</div>'
+    + (rowsHTML || '<div class="fiche-field"><div class="tgl-sub">Aucun joueur n\'avait voté présent/dispo si besoin.</div></div>')
+    + '</div>'
+    + '<div class="fiche-section" style="padding:14px;">'
+    + '<div class="fiche-section-lbl" style="padding-top:0;margin-bottom:10px;">Joueurs extérieurs (dépannage)</div>'
+    + guestsHTML
+    + '<button class="save-btn" style="background:var(--bg4);color:var(--text);margin-top:4px;" onclick="addGuestRow(\''+matchId+'\')">+ Ajouter un joueur extérieur</button>'
+    + '</div>'
+    + '<div class="fiche-section" style="padding:14px;">'
+    + '<div class="fiche-section-lbl" style="padding-top:0;margin-bottom:10px;">Score</div>'
+    + '<div style="display:flex;align-items:center;justify-content:center;gap:14px;">'
+    + '<input class="fiche-input" type="number" min="0" id="res-score-a" value="'+scoreA+'" placeholder="0" style="text-align:center;font-size:22px;font-weight:800;background:var(--bg);border-radius:var(--r-sm);padding:8px;width:64px;" />'
+    + '<span style="font-weight:800;color:var(--text3);">-</span>'
+    + '<input class="fiche-input" type="number" min="0" id="res-score-b" value="'+scoreB+'" placeholder="0" style="text-align:center;font-size:22px;font-weight:800;background:var(--bg);border-radius:var(--r-sm);padding:8px;width:64px;" />'
+    + '</div>'
+    + '</div>'
+    + '<button class="save-btn" onclick="saveResult(\''+matchId+'\')">Enregistrer le résultat</button>'
+    + (saved ? '<button class="save-btn" style="background:var(--red-bg);color:var(--red);margin-top:8px;" onclick="deleteResult(\''+matchId+'\')">Supprimer le résultat</button>' : '');
+}
+
+function guestRowHTML(uid, name, team) {
+  return '<div class="fiche-field" id="res-guest-row-'+uid+'" style="display:flex;align-items:center;gap:8px;">'
+    + '<input class="fiche-input" type="text" id="res-guest-name-'+uid+'" value="'+(name||'')+'" placeholder="Nom du joueur" style="flex:1;background:var(--bg);border-radius:var(--r-sm);padding:8px 10px;" />'
+    + teamSelectHTML('res-guest-team-'+uid, team||'A')
+    + '<span style="color:var(--red);font-size:18px;cursor:pointer;padding:0 4px;" onclick="removeGuestRow(\''+uid+'\')">&#10005;</span>'
+    + '</div>';
+}
+
+function addGuestRow(matchId) {
+  resultGuestCounter++;
+  var uid = 'g' + Date.now() + resultGuestCounter;
+  var container = document.getElementById('res-guests-list');
+  if (container) container.insertAdjacentHTML('beforeend', guestRowHTML(uid, '', 'A'));
+}
+
+function removeGuestRow(uid) {
+  var row = document.getElementById('res-guest-row-' + uid);
+  if (row) row.remove();
+}
+
+function saveResult(matchId) {
+  var assignments = {};
+  document.querySelectorAll('select[id^="res-team-"]').forEach(function(sel) {
+    var pid = sel.id.replace('res-team-', '');
+    assignments[pid] = sel.value;
+  });
+
+  var guests = [];
+  document.querySelectorAll('#res-guests-list [id^="res-guest-row-"]').forEach(function(row) {
+    var uid = row.id.replace('res-guest-row-', '');
+    var nameEl = document.getElementById('res-guest-name-' + uid);
+    var teamEl = document.getElementById('res-guest-team-' + uid);
+    var name = nameEl ? nameEl.value.trim() : '';
+    if (name) guests.push({ uid: uid, name: name, team: teamEl ? teamEl.value : 'A' });
+  });
+
+  var scoreAraw = document.getElementById('res-score-a').value;
+  var scoreBraw = document.getElementById('res-score-b').value;
+
+  var payload = {
+    assignments: assignments,
+    guests: guests,
+    scoreA: scoreAraw === '' ? null : Number(scoreAraw),
+    scoreB: scoreBraw === '' ? null : Number(scoreBraw),
+    updatedAt: firebase.database.ServerValue.TIMESTAMP
+  };
+
+  db.ref('results/' + matchId).set(payload).then(function() {
+    closeOv('ov-result');
+    renderResultsList();
+  }).catch(function(err) {
+    console.error('Sauvegarde resultat :', err);
+    alert("Erreur lors de l'enregistrement du résultat.");
+  });
+}
+
+function deleteResult(matchId) {
+  if (!confirm('Supprimer le résultat de ce match ?')) return;
+  db.ref('results/' + matchId).remove().then(function() {
+    closeOv('ov-result');
+    renderResultsList();
+  });
 }
 
 // ══ NOTIFICATIONS PUSH ══
@@ -1150,6 +1404,7 @@ function showScreen(name, btn) {
   btn.classList.add('active');
   if (name==='planning') renderPlanning();
   if (name==='players')  renderPlayers();
+  if (name==='results')  renderResultsList();
   if (name==='notifs')   renderNotifs();
 }
 function closeOv(id) { document.getElementById(id).classList.remove('open'); }
@@ -1194,6 +1449,8 @@ function loginUser(user) {
   applyTheme(savedTheme);
   var badge = document.getElementById('user-badge');
   badge.textContent = user.isAdmin ? 'ADMIN' : formatName(user.prenom, user.nom);
+  var navResults = document.getElementById('nav-results');
+  if (navResults) navResults.style.display = user.isAdmin ? 'flex' : 'none';
   listenVotes(getMatchId(planning[0]));
   if (!user.isAdmin) {
     db.ref('connectedPlayers/' + user.id).set(firebase.database.ServerValue.TIMESTAMP);
