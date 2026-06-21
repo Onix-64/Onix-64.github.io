@@ -134,9 +134,9 @@
     .chip-name { font-size:12px; font-weight:700; color:var(--text); }
     .chip-role { font-size:10px; color:var(--text3); }
 
-    .fiche-av { width:70px; height:70px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; margin:0; border:2px solid var(--gold-dim); }
-    .fiche-av-wrap { position:relative; width:70px; height:70px; margin:0 auto 12px; cursor:pointer; }
-    .fiche-av-edit { position:absolute; bottom:-2px; right:-2px; width:24px; height:24px; border-radius:50%; background:var(--gold); display:flex; align-items:center; justify-content:center; font-size:11px; border:2px solid var(--bg2); }
+    .fiche-av { width:140px; height:140px; border-radius:var(--r-lg); display:flex; align-items:center; justify-content:center; font-size:36px; font-weight:800; margin:0; border:2px solid var(--gold-dim); }
+    .fiche-av-wrap { position:relative; width:140px; height:140px; margin:0 auto 12px; cursor:pointer; }
+    .fiche-av-edit { position:absolute; bottom:-4px; right:-4px; width:34px; height:34px; border-radius:50%; background:var(--gold); display:flex; align-items:center; justify-content:center; font-size:16px; border:2px solid var(--bg2); }
     .fiche-photo-remove { font-size:11px; color:var(--red); text-align:center; margin-top:8px; cursor:pointer; text-decoration:underline; }
     .fiche-name { font-size:20px; font-weight:800; color:var(--text); text-align:center; }
     .fiche-role { font-size:11px; color:var(--gold); text-transform:uppercase; text-align:center; margin-top:4px; }
@@ -936,7 +936,7 @@ function handlePhotoSelect(id, inputEl) {
   reader.onload = function(e) {
     var img = new Image();
     img.onload = function() {
-      var SIZE = 320;
+      var SIZE = 500;
       var canvas = document.createElement('canvas');
       canvas.width = SIZE; canvas.height = SIZE;
       var ctx = canvas.getContext('2d');
