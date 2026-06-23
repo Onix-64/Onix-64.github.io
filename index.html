@@ -399,6 +399,14 @@
         <div><div class="tgl-lbl">Suspendre les notifications</div><div class="tgl-sub" id="admin-pause-sub">Pour tout le monde (ex: vacances)</div></div>
         <button class="toggle" id="admin-pause-toggle"></button>
       </div>
+      <div class="toggle-row" style="cursor:pointer" onclick="adminTriggerNotify()">
+        <div><div class="tgl-lbl">📣 Envoyer le sondage</div><div class="tgl-sub" id="admin-notify-sub">Notif hebdo à tous les joueurs</div></div>
+        <span style="color:var(--gold);font-size:18px">›</span>
+      </div>
+      <div class="toggle-row" style="cursor:pointer" onclick="adminTriggerRemind()">
+        <div><div class="tgl-lbl">🔔 Envoyer le rappel</div><div class="tgl-sub" id="admin-remind-sub">Relance ceux qui n'ont pas voté</div></div>
+        <span style="color:var(--gold);font-size:18px">›</span>
+      </div>
       <div class="card-lbl" style="margin-top:18px">Joueurs connectés</div>
       <div class="tgl-sub" id="admin-connected-count" style="margin-bottom:6px">Chargement...</div>
       <div id="admin-connected-list"></div>
@@ -1530,6 +1538,34 @@ function adminResetVotes() {
   }).catch(function(err) {
     alert('Erreur : ' + (err && err.message || err));
   });
+}
+
+function adminTriggerNotify() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  var m0 = planning[0];
+  var matchId = getMatchId(m0);
+  var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (!confirm('Envoyer le sondage de vote à tous les joueurs pour le match du ' + dateLabel + ' ?')) return;
+  // Marque le match comme "notifié" maintenant (ouvre le sondage dans l'appli)
+  // et pose un flag pour que le bot envoie les push si déclenché manuellement
+  db.ref('matches/' + matchId + '/notifiedAt').set(firebase.database.ServerValue.TIMESTAMP).then(function() {
+    db.ref('settings/manualTrigger').set({type:'notify', matchId:matchId, triggeredAt:firebase.database.ServerValue.TIMESTAMP}).then(function() {
+      var sub = document.getElementById('admin-notify-sub');
+      if (sub) sub.textContent = '✅ Sondage ouvert · trigger posé dans Firebase';
+    });
+  }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
+}
+
+function adminTriggerRemind() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  var m0 = planning[0];
+  var matchId = getMatchId(m0);
+  var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (!confirm('Envoyer un rappel aux joueurs qui n\'ont pas encore voté pour le match du ' + dateLabel + ' ?')) return;
+  db.ref('settings/manualTrigger').set({type:'remind', matchId:matchId, triggeredAt:firebase.database.ServerValue.TIMESTAMP}).then(function() {
+    var sub = document.getElementById('admin-remind-sub');
+    if (sub) sub.textContent = '✅ Trigger rappel posé dans Firebase';
+  }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
 }
 
 function adminToggleNotifPause() {
