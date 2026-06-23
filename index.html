@@ -460,6 +460,29 @@
   </div>
 </div>
 
+<div class="overlay" id="ov-crop" onclick="closeCropModal()">
+  <div class="modal" onclick="event.stopPropagation()" style="padding-bottom:32px;">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <div class="modal-eyebrow">Photo de profil</div>
+      <div class="modal-title">Cadrez votre photo</div>
+      <div class="modal-sub">Glissez pour déplacer · Pincez pour zoomer</div>
+    </div>
+    <div class="modal-body" style="display:flex;flex-direction:column;align-items:center;gap:16px;">
+      <canvas id="crop-canvas" style="border-radius:50%;touch-action:none;cursor:grab;background:#111;"></canvas>
+      <div style="display:flex;gap:10px;">
+        <button onclick="cropZoom(0.85)" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:10px 18px;font-size:18px;cursor:pointer;">−</button>
+        <button onclick="cropReset()" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;">Reset</button>
+        <button onclick="cropZoom(1.18)" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:10px 18px;font-size:18px;cursor:pointer;">+</button>
+      </div>
+      <div style="display:flex;gap:10px;width:100%;">
+        <button onclick="closeCropModal()" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:14px;font-size:14px;font-weight:700;cursor:pointer;">Annuler</button>
+        <button onclick="confirmCrop()" style="flex:2;background:var(--gold);border:none;color:var(--bg);border-radius:var(--r-md);padding:14px;font-size:15px;font-weight:800;cursor:pointer;">Valider ce cadrage</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
@@ -928,36 +951,92 @@ function openFiche(id) {
   var d = pdata[id];
   var isGoal = p.role==='gardien';
   var matchCount = planning.reduce(function(a,m){return a+(m.players.concat(m.goalkeepers).some(function(x){return x.id===id;})?1:0);},0);
+
+  // Droits d'édition : uniquement le joueur lui-même ou l'admin
+  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === id);
+
+  // En-tête : photo cliquable uniquement si on peut éditer
+  var avWrapOpen = canEdit
+    ? '<div class="fiche-av-wrap" onclick="document.getElementById(\'f-photo-input\').click()">'
+    : '<div class="fiche-av-wrap" style="cursor:default">';
+  var editBadge = canEdit ? '<div class="fiche-av-edit">&#128247;</div>' : '';
+  var photoInput = canEdit
+    ? '<input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhotoSelect('+id+',this)" />'
+    : '';
+  var photoRemove = canEdit
+    ? '<div class="fiche-photo-remove" id="fiche-photo-remove" onclick="removePhoto('+id+')" style="display:none">Retirer la photo</div>'
+    : '';
+
   document.getElementById('fiche-head').innerHTML =
-    '<button class="close-btn" onclick="saveAndClose('+id+')">&#10005;</button>'
+    '<button class="close-btn" onclick="'+(canEdit ? 'saveAndClose('+id+')' : 'closeOv(\'ov-player\')')+'">&#10005;</button>'
     + '<div style="text-align:center;padding-top:8px">'
-    + '<div class="fiche-av-wrap" onclick="document.getElementById(\'f-photo-input\').click()">'
+    + avWrapOpen
     + '<div class="fiche-av-inner" id="fiche-av-inner"></div>'
-    + '<div class="fiche-av-edit">&#128247;</div>'
+    + editBadge
     + '</div>'
-    + '<input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhotoSelect('+id+',this)" />'
+    + photoInput
     + '<div class="fiche-name">'+formatName(p.prenom,p.nom)+'</div>'
     + '<div class="fiche-role">'+(isGoal?'Gardien':'Joueur')+'</div>'
-    + '<div class="fiche-photo-remove" id="fiche-photo-remove" onclick="removePhoto('+id+')" style="display:none">Retirer la photo</div>'
+    + photoRemove
     + '</div>';
   renderFicheAvatar(id);
+
+  // Champs de profil : inputs si éditables, texte simple sinon
+  function ficheField(lbl, val, placeholder) {
+    if (canEdit) {
+      return '<div class="fiche-field"><div class="fiche-lbl">'+lbl+'</div>'
+        + '<input class="fiche-input" type="text" id="f-'+lbl.toLowerCase().replace(/ /g,'_')+'" value="'+val+'" placeholder="'+(placeholder||'')+'" /></div>';
+    }
+    return '<div class="fiche-field"><div class="fiche-lbl">'+lbl+'</div>'
+      + '<div style="font-size:14px;font-weight:500;color:'+(val?'var(--text)':'var(--text3)')+';">'+(val||'—')+'</div></div>';
+  }
+
+  var ddnHtml = canEdit
+    ? '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><input class="fiche-input" type="date" id="f-ddn" value="'+d.ddn+'" /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><div style="font-size:14px;font-weight:500;color:'+(d.ddn?'var(--text)':'var(--text3)')+';">'+(d.ddn || '—')+'</div></div>';
+
+  var piedHtml = canEdit
+    ? '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><select class="fiche-select" id="f-pied">'+['Droit','Gauche','Les deux'].map(function(v){return '<option '+(d.pied===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><div style="font-size:14px;font-weight:500;color:var(--text);">'+(d.pied||'—')+'</div></div>';
+
+  var surnomsHtml = canEdit
+    ? '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><input class="fiche-input" type="text" id="f-surnoms" value="'+d.surnoms+'" placeholder="Rousse, Nono..." /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><div style="font-size:14px;font-weight:500;color:'+(d.surnoms?'var(--text)':'var(--text3)')+';">'+(d.surnoms||'—')+'</div></div>';
+
+  var clubHtml = canEdit
+    ? '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><input class="fiche-input" type="text" id="f-club" value="'+d.club+'" placeholder="PSG, OM..." /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><div style="font-size:14px;font-weight:500;color:'+(d.club?'var(--text)':'var(--text3)')+';">'+(d.club||'—')+'</div></div>';
+
+  var dispoHtml = canEdit
+    ? '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><input class="fiche-input" type="text" id="f-dispo" value="'+d.disponibilites+'" placeholder="Tous les mardis..." /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><div style="font-size:14px;font-weight:500;color:'+(d.disponibilites?'var(--text)':'var(--text3)')+';">'+(d.disponibilites||'—')+'</div></div>';
+
+  var saveBtn = canEdit
+    ? '<button class="save-btn" onclick="saveAndClose('+id+')">Enregistrer</button>'
+    : '';
+
+  var readOnlyBanner = !canEdit
+    ? '<div style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;color:var(--text2);text-align:center;margin-bottom:12px;">👁 Fiche en lecture seule</div>'
+    : '';
+
   document.getElementById('fiche-body').innerHTML =
-    '<div class="fiche-section">'
+    readOnlyBanner
+    + '<div class="fiche-section">'
     + '<div class="fiche-section-lbl">Profil</div>'
-    + '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><input class="fiche-input" type="date" id="f-ddn" value="'+d.ddn+'" /></div>'
-    + '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><input class="fiche-input" type="text" id="f-surnoms" value="'+d.surnoms+'" placeholder="Rousse, Nono..." /></div>'
-    + '<div class="fiche-field"><div class="fiche-lbl">Pied prefere</div><select class="fiche-select" id="f-pied">'+['Droit','Gauche','Les deux'].map(function(v){return '<option '+(d.pied===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
-    + '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><input class="fiche-input" type="text" id="f-club" value="'+d.club+'" placeholder="PSG, OM..." /></div>'
-    + '<div class="fiche-field"><div class="fiche-lbl">Disponibilites</div><input class="fiche-input" type="text" id="f-dispo" value="'+d.disponibilites+'" placeholder="Tous les mardis..." /></div>'
+    + ddnHtml
+    + surnomsHtml
+    + piedHtml
+    + clubHtml
+    + dispoHtml
     + '</div>'
     + '<div class="fiche-section" style="padding:14px;">'
     + '<div class="fiche-section-lbl" style="padding-top:0;margin-bottom:10px;">Statistiques</div>'
     + '<div class="fiche-stats" style="margin:0;">'
-    + '<div class="fiche-stat"><div class="fiche-stat-n">'+matchCount+'</div><div class="fiche-stat-l">Matchs prevus</div></div>'
-    + '<div class="fiche-stat"><div class="fiche-stat-n" id="f-matchs-joues">&hellip;</div><div class="fiche-stat-l">Matchs joues</div></div>'
+    + '<div class="fiche-stat"><div class="fiche-stat-n">'+matchCount+'</div><div class="fiche-stat-l">Matchs prévus</div></div>'
+    + '<div class="fiche-stat"><div class="fiche-stat-n" id="f-matchs-joues">&hellip;</div><div class="fiche-stat-l">Matchs joués</div></div>'
     + '</div>'
     + '</div>'
-    + '<button class="save-btn" onclick="saveAndClose('+id+')">Enregistrer</button>';
+    + saveBtn;
   document.getElementById('ov-player').classList.add('open');
   computeMatchsJoues(id, function(n) {
     var el = document.getElementById('f-matchs-joues');
@@ -987,28 +1066,172 @@ function renderFicheAvatar(id) {
   }
 }
 
-// Lit le fichier choisi, le recadre en carre et le redimensionne cote client
-// (limite la taille stockee dans Firebase) avant de l'enregistrer en apercu.
+// ══ CROP DE PHOTO ══
+// Variables globales pour le crop
+var _cropImg = null, _cropPlayerId = null;
+var _cropScale = 1, _cropOffsetX = 0, _cropOffsetY = 0;
+var _cropDragging = false, _cropLastX = 0, _cropLastY = 0;
+var _cropPinchDist = 0;
+
 function handlePhotoSelect(id, inputEl) {
   var file = inputEl.files && inputEl.files[0];
   if (!file) return;
+  _cropPlayerId = id;
   var reader = new FileReader();
   reader.onload = function(e) {
     var img = new Image();
     img.onload = function() {
-      var SIZE = 600;
-      var canvas = document.createElement('canvas');
-      canvas.width = SIZE; canvas.height = SIZE;
-      var ctx = canvas.getContext('2d');
-      var side = Math.min(img.width, img.height);
-      var sx = (img.width - side) / 2, sy = (img.height - side) / 2;
-      ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
-      pdata[id].photo = canvas.toDataURL('image/jpeg', 0.85);
-      renderFicheAvatar(id);
+      _cropImg = img;
+      _cropScale = 1; _cropOffsetX = 0; _cropOffsetY = 0;
+      openCropModal();
     };
     img.src = e.target.result;
   };
   reader.readAsDataURL(file);
+}
+
+var _cropCanvasInited = false;
+function openCropModal() {
+  var ov = document.getElementById('ov-crop');
+  if (!ov) return;
+  if (!_cropCanvasInited) { initCropCanvas(); _cropCanvasInited = true; }
+  ov.classList.add('open');
+  setTimeout(function() { drawCrop(); }, 50);
+}
+
+function drawCrop() {
+  var canvas = document.getElementById('crop-canvas');
+  if (!canvas || !_cropImg) return;
+  var SIZE = canvas.width; // carré
+  var ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, SIZE, SIZE);
+  // Calcul du rendu : on centre l'image et on applique offset + scale
+  var iw = _cropImg.width * _cropScale;
+  var ih = _cropImg.height * _cropScale;
+  var x = (SIZE - iw) / 2 + _cropOffsetX;
+  var y = (SIZE - ih) / 2 + _cropOffsetY;
+  ctx.drawImage(_cropImg, x, y, iw, ih);
+  // Vignette autour du cercle
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.fillRect(0, 0, SIZE, SIZE);
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  ctx.arc(SIZE/2, SIZE/2, SIZE/2 - 2, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+  // Cercle guide
+  ctx.strokeStyle = '#e8c14a';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(SIZE/2, SIZE/2, SIZE/2 - 2, 0, Math.PI*2);
+  ctx.stroke();
+}
+
+function confirmCrop() {
+  var canvas = document.getElementById('crop-canvas');
+  if (!canvas || !_cropImg) return;
+  var SIZE = 600;
+  var out = document.createElement('canvas');
+  out.width = SIZE; out.height = SIZE;
+  var ctx = out.getContext('2d');
+  // Recalcul à la résolution finale (canvas affiché est 280px, sortie 600px)
+  var displayed = canvas.width;
+  var ratio = SIZE / displayed;
+  var iw = _cropImg.width * _cropScale * ratio;
+  var ih = _cropImg.height * _cropScale * ratio;
+  var x = (SIZE - iw) / 2 + _cropOffsetX * ratio;
+  var y = (SIZE - ih) / 2 + _cropOffsetY * ratio;
+  ctx.drawImage(_cropImg, x, y, iw, ih);
+  pdata[_cropPlayerId].photo = out.toDataURL('image/jpeg', 0.85);
+  renderFicheAvatar(_cropPlayerId);
+  closeCropModal();
+}
+
+function closeCropModal() {
+  var ov = document.getElementById('ov-crop');
+  if (ov) ov.classList.remove('open');
+  _cropImg = null;
+  // Reset l'input file pour permettre de re-sélectionner la même photo
+  var inp = document.getElementById('f-photo-input');
+  if (inp) inp.value = '';
+}
+
+// Initialise les événements du canvas de crop (appelé une fois au chargement)
+function initCropCanvas() {
+  var canvas = document.getElementById('crop-canvas');
+  if (!canvas) return;
+
+  // Taille responsive : 280px ou largeur viewport - 80px
+  var sz = Math.min(280, window.innerWidth - 80);
+  canvas.width = sz; canvas.height = sz;
+
+  // TOUCH
+  canvas.addEventListener('touchstart', function(e) {
+    e.preventDefault();
+    if (e.touches.length === 1) {
+      _cropDragging = true;
+      _cropLastX = e.touches[0].clientX;
+      _cropLastY = e.touches[0].clientY;
+    } else if (e.touches.length === 2) {
+      _cropPinchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+    }
+  }, {passive:false});
+  canvas.addEventListener('touchmove', function(e) {
+    e.preventDefault();
+    if (e.touches.length === 1 && _cropDragging) {
+      _cropOffsetX += e.touches[0].clientX - _cropLastX;
+      _cropOffsetY += e.touches[0].clientY - _cropLastY;
+      _cropLastX = e.touches[0].clientX;
+      _cropLastY = e.touches[0].clientY;
+      drawCrop();
+    } else if (e.touches.length === 2) {
+      var dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      var delta = dist / (_cropPinchDist || dist);
+      _cropScale = Math.max(0.2, Math.min(5, _cropScale * delta));
+      _cropPinchDist = dist;
+      drawCrop();
+    }
+  }, {passive:false});
+  canvas.addEventListener('touchend', function() { _cropDragging = false; });
+
+  // MOUSE
+  canvas.addEventListener('mousedown', function(e) {
+    _cropDragging = true;
+    _cropLastX = e.clientX; _cropLastY = e.clientY;
+  });
+  canvas.addEventListener('mousemove', function(e) {
+    if (!_cropDragging) return;
+    _cropOffsetX += e.clientX - _cropLastX;
+    _cropOffsetY += e.clientY - _cropLastY;
+    _cropLastX = e.clientX; _cropLastY = e.clientY;
+    drawCrop();
+  });
+  canvas.addEventListener('mouseup', function() { _cropDragging = false; });
+  canvas.addEventListener('mouseleave', function() { _cropDragging = false; });
+  // Zoom molette
+  canvas.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? 0.9 : 1.1;
+    _cropScale = Math.max(0.2, Math.min(5, _cropScale * delta));
+    drawCrop();
+  }, {passive:false});
+}
+
+// Zoom via boutons
+function cropZoom(factor) {
+  _cropScale = Math.max(0.2, Math.min(5, _cropScale * factor));
+  drawCrop();
+}
+function cropReset() {
+  _cropScale = 1; _cropOffsetX = 0; _cropOffsetY = 0;
+  drawCrop();
 }
 
 function removePhoto(id) {
@@ -1055,11 +1278,13 @@ function computeMatchsJoues(playerId, callback) {
 }
 
 function saveAndClose(id) {
-  pdata[id].ddn   = document.getElementById('f-ddn').value   || pdata[id].ddn;
-  pdata[id].surnoms = document.getElementById('f-surnoms').value || pdata[id].surnoms;
-  pdata[id].pied  = document.getElementById('f-pied').value  || pdata[id].pied;
-  pdata[id].club  = document.getElementById('f-club').value  || pdata[id].club;
-  pdata[id].disponibilites = document.getElementById('f-dispo').value || pdata[id].disponibilites;
+  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === id);
+  if (!canEdit) { closeOv('ov-player'); return; }
+  pdata[id].ddn   = (document.getElementById('f-ddn')   && document.getElementById('f-ddn').value)   || pdata[id].ddn;
+  pdata[id].surnoms = (document.getElementById('f-surnoms') && document.getElementById('f-surnoms').value) || pdata[id].surnoms;
+  pdata[id].pied  = (document.getElementById('f-pied')  && document.getElementById('f-pied').value)  || pdata[id].pied;
+  pdata[id].club  = (document.getElementById('f-club')  && document.getElementById('f-club').value)  || pdata[id].club;
+  pdata[id].disponibilites = (document.getElementById('f-dispo') && document.getElementById('f-dispo').value) || pdata[id].disponibilites;
   db.ref('playerProfiles/' + id).set(pdata[id]).catch(function(err) { console.error('Sauvegarde profil :', err); });
   closeOv('ov-player');
   renderHome();
