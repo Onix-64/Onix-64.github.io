@@ -819,7 +819,7 @@ function renderHome() {
   var buttonsWrap = document.getElementById('vote-buttons-wrap');
   if (!matchNotifiedAt) {
     if (pollLabel) pollLabel.textContent = 'SONDAGE A VENIR';
-    if (pendingMsg) { pendingMsg.style.display = 'block'; pendingMsg.textContent = "Le sondage n'est pas encore lancé pour ce match. Reviens un peu plus tard !"; }
+    if (pendingMsg) { pendingMsg.style.display = 'block'; pendingMsg.innerHTML = "Le sondage n'est pas encore lancé pour ce match.<br>Reviens un peu plus tard !"; }
     if (buttonsWrap) buttonsWrap.style.display = 'none';
   } else if (nowTime < voteCutoff) {
     if (pollLabel) pollLabel.textContent = 'SONDAGE EN COURS';
