@@ -1024,23 +1024,24 @@ function openFiche(id) {
   var isGoal = p.role==='gardien';
   var matchCount = planning.reduce(function(a,m){return a+(m.players.concat(m.goalkeepers).some(function(x){return x.id===id;})?1:0);},0);
 
-  // Droits d'édition : uniquement le joueur lui-même ou l'admin
-  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === id);
+  // Droits d'édition
+  var canEditProfil = currentUser && (currentUser.isAdmin || currentUser.id === id);
+  var canEditPhoto  = currentUser && currentUser.isAdmin;
 
-  // En-tête : photo cliquable uniquement si on peut éditer
-  var avWrapOpen = canEdit
+  // En-tête : photo cliquable uniquement par l'admin
+  var avWrapOpen = canEditPhoto
     ? '<div class="fiche-av-wrap" onclick="document.getElementById(\'f-photo-input\').click()">'
     : '<div class="fiche-av-wrap" style="cursor:default">';
-  var editBadge = canEdit ? '<div class="fiche-av-edit">&#128247;</div>' : '';
-  var photoInput = canEdit
+  var editBadge = canEditPhoto ? '<div class="fiche-av-edit">&#128247;</div>' : '';
+  var photoInput = canEditPhoto
     ? '<input type="file" accept="image/*" id="f-photo-input" style="display:none" onchange="handlePhotoSelect('+id+',this)" />'
     : '';
-  var photoRemove = canEdit
+  var photoRemove = canEditPhoto
     ? '<div class="fiche-photo-remove" id="fiche-photo-remove" onclick="removePhoto('+id+')" style="display:none">Retirer la photo</div>'
     : '';
 
   document.getElementById('fiche-head').innerHTML =
-    '<button class="close-btn" onclick="'+(canEdit ? 'saveAndClose('+id+')' : 'closeOv(\'ov-player\')')+'">&#10005;</button>'
+    '<button class="close-btn" onclick="'+(canEditProfil ? 'saveAndClose('+id+')' : 'closeOv(\'ov-player\')')+'">\u2715</button>'
     + '<div style="text-align:center;padding-top:8px">'
     + avWrapOpen
     + '<div class="fiche-av-inner" id="fiche-av-inner"></div>'
@@ -1056,9 +1057,8 @@ function openFiche(id) {
     + '</div>';
   renderFicheAvatar(id);
 
-  // Champs de profil : inputs si éditables, texte simple sinon
   function ficheField(lbl, val, placeholder) {
-    if (canEdit) {
+    if (canEditProfil) {
       return '<div class="fiche-field"><div class="fiche-lbl">'+lbl+'</div>'
         + '<input class="fiche-input" type="text" id="f-'+lbl.toLowerCase().replace(/ /g,'_')+'" value="'+val+'" placeholder="'+(placeholder||'')+'" /></div>';
     }
@@ -1066,27 +1066,27 @@ function openFiche(id) {
       + '<div style="font-size:14px;font-weight:500;color:'+(val?'var(--text)':'var(--text3)')+';">'+(val||'—')+'</div></div>';
   }
 
-  var ddnHtml = canEdit
+  var ddnHtml = canEditProfil
     ? '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><input class="fiche-input" type="date" id="f-ddn" value="'+d.ddn+'" /></div>'
     : '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><div style="font-size:14px;font-weight:500;color:'+(d.ddn?'var(--text)':'var(--text3)')+';">'+(d.ddn || '—')+'</div></div>';
 
-  var piedHtml = canEdit
+  var piedHtml = canEditProfil
     ? '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><select class="fiche-select" id="f-pied">'+['Droit','Gauche','Les deux'].map(function(v){return '<option '+(d.pied===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
     : '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><div style="font-size:14px;font-weight:500;color:var(--text);">'+(d.pied||'—')+'</div></div>';
 
-  var surnomsHtml = canEdit
+  var surnomsHtml = canEditProfil
     ? '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><input class="fiche-input" type="text" id="f-surnoms" value="'+d.surnoms+'" placeholder="Rousse, Nono..." /></div>'
     : '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><div style="font-size:14px;font-weight:500;color:'+(d.surnoms?'var(--text)':'var(--text3)')+';">'+(d.surnoms||'—')+'</div></div>';
 
-  var clubHtml = canEdit
+  var clubHtml = canEditProfil
     ? '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><input class="fiche-input" type="text" id="f-club" value="'+d.club+'" placeholder="PSG, OM..." /></div>'
     : '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><div style="font-size:14px;font-weight:500;color:'+(d.club?'var(--text)':'var(--text3)')+';">'+(d.club||'—')+'</div></div>';
 
-  var dispoHtml = canEdit
+  var dispoHtml = canEditProfil
     ? '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><input class="fiche-input" type="text" id="f-dispo" value="'+d.disponibilites+'" placeholder="Tous les mardis..." /></div>'
     : '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><div style="font-size:14px;font-weight:500;color:'+(d.disponibilites?'var(--text)':'var(--text3)')+';">'+(d.disponibilites||'—')+'</div></div>';
 
-  var saveBtn = canEdit
+  var saveBtn = canEditProfil
     ? '<button class="save-btn" onclick="saveAndClose('+id+')">Enregistrer</button>'
     : '';
 
@@ -1352,8 +1352,8 @@ function computeMatchsJoues(playerId, callback) {
 }
 
 function saveAndClose(id) {
-  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === id);
-  if (!canEdit) { closeOv('ov-player'); return; }
+  var canEditProfil = currentUser && (currentUser.isAdmin || currentUser.id === id);
+  if (!canEditProfil) { closeOv('ov-player'); return; }
   pdata[id].ddn   = (document.getElementById('f-ddn')   && document.getElementById('f-ddn').value)   || pdata[id].ddn;
   pdata[id].surnoms = (document.getElementById('f-surnoms') && document.getElementById('f-surnoms').value) || pdata[id].surnoms;
   pdata[id].pied  = (document.getElementById('f-pied')  && document.getElementById('f-pied').value)  || pdata[id].pied;
@@ -1697,27 +1697,23 @@ function openBio(id) {
   var p = PLAYERS.find(function(x){ return x.id === id; });
   if (!p) return;
   _bioPlayerId = id;
-  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === id);
+  var canEditBio = currentUser && currentUser.isAdmin;
 
-  // Avatar
   var avEl = document.getElementById('bio-av');
   avEl.style.background = p.color || '#e8c14a';
   avEl.style.color = '#0d0d0d';
   avEl.textContent = (p.prenom[0] + p.nom[0]).toUpperCase();
 
-  // Nom
   document.getElementById('bio-name').textContent = formatName(p.prenom, p.nom);
 
-  // Texte
   var textarea = document.getElementById('bio-text');
   textarea.value = (pdata[id] && pdata[id].bio) || '';
-  textarea.readOnly = !canEdit;
-  textarea.style.color = canEdit ? 'var(--text)' : 'var(--text2)';
-  textarea.placeholder = canEdit ? 'Écris ta biographie ici…' : 'Aucune biographie renseignée.';
+  textarea.readOnly = !canEditBio;
+  textarea.style.color = canEditBio ? 'var(--text)' : 'var(--text2)';
+  textarea.placeholder = canEditBio ? 'Écris la biographie ici…' : 'Aucune biographie renseignée.';
 
-  // Bouton enregistrer visible seulement si éditable
   var saveBtn = document.getElementById('bio-save-btn');
-  if (saveBtn) saveBtn.style.display = canEdit ? '' : 'none';
+  if (saveBtn) saveBtn.style.display = canEditBio ? '' : 'none';
 
   document.getElementById('ov-bio').classList.add('open');
 }
@@ -1729,8 +1725,7 @@ function closeBio() {
 
 function saveBio() {
   if (!_bioPlayerId) return;
-  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === _bioPlayerId);
-  if (!canEdit) { closeBio(); return; }
+  if (!currentUser || !currentUser.isAdmin) { closeBio(); return; }
   var text = document.getElementById('bio-text').value.trim();
   if (!pdata[_bioPlayerId]) pdata[_bioPlayerId] = {};
   pdata[_bioPlayerId].bio = text;
