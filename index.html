@@ -119,6 +119,10 @@
 
     .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:flex-end; justify-content:center; }
     .overlay.open { display:flex; }
+    .bio-bubble { background:var(--bg2); border-radius:var(--r-lg); border:0.5px solid var(--border); width:calc(100% - 48px); max-width:400px; padding:20px; animation:fadeScale 0.2s ease; position:relative; margin-bottom:80px; }
+    @keyframes fadeScale { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
+    .bio-av { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
+    #ov-bio { align-items:center; z-index:300; }
     .modal { background:var(--bg2); border-radius:var(--r-lg) var(--r-lg) 0 0; border-top:0.5px solid var(--border); width:100%; max-width:480px; max-height:88vh; overflow-y:auto; padding-bottom:24px; animation:slideUp 0.25s ease; }
     @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
     .modal-handle { width:36px; height:4px; background:var(--border2); border-radius:2px; margin:12px auto 0; }
@@ -503,6 +507,28 @@
       <div class="modal-title" id="res-title" style="padding-right:36px">—</div>
     </div>
     <div class="modal-body" id="res-body"></div>
+  </div>
+</div>
+
+<div class="overlay" id="ov-bio" onclick="closeBio()">
+  <div class="bio-bubble" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="bio-av" id="bio-av"></div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text)" id="bio-name"></div>
+          <div style="font-size:11px;color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:1px;">Biographie</div>
+        </div>
+      </div>
+      <button onclick="closeBio()" style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button>
+    </div>
+    <div style="border-top:0.5px solid var(--border);padding-top:14px;">
+      <textarea id="bio-text" placeholder="Écris ta biographie ici…" style="width:100%;min-height:140px;resize:vertical;background:transparent;border:none;outline:none;font-size:14px;line-height:1.7;color:var(--text);font-family:inherit;"></textarea>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
+      <button onclick="closeBio()" style="padding:9px 18px;font-size:13px;font-weight:700;border-radius:var(--r-md);border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;">Fermer</button>
+      <button id="bio-save-btn" onclick="saveBio()" style="padding:9px 18px;font-size:13px;font-weight:700;border-radius:var(--r-md);border:none;background:var(--gold);color:var(--bg);cursor:pointer;">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -1023,6 +1049,9 @@ function openFiche(id) {
     + photoInput
     + '<div class="fiche-name">'+formatName(p.prenom,p.nom)+'</div>'
     + '<div class="fiche-role">'+(isGoal?'Gardien':'Joueur')+'</div>'
+    + '<div style="margin-top:10px;">'
+    + '<button onclick="openBio('+id+')" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--gold);border-radius:var(--r-md);padding:7px 18px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;">📖 Biographie</button>'
+    + '</div>'
     + photoRemove
     + '</div>';
   renderFicheAvatar(id);
@@ -1660,6 +1689,55 @@ function adminLoadSchedule() {
       if (rt) rt.value = s.remind.time || '16:00';
     }
   });
+}
+
+// ══ BIOGRAPHIE ══
+var _bioPlayerId = null;
+
+function openBio(id) {
+  var p = PLAYERS.find(function(x){ return x.id === id; });
+  _bioPlayerId = id;
+  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === id);
+
+  // Avatar
+  var avEl = document.getElementById('bio-av');
+  var color = playerColor(id);
+  avEl.style.background = color + '33';
+  avEl.style.color = color;
+  avEl.textContent = (p.prenom[0] + p.nom[0]).toUpperCase();
+
+  // Nom
+  document.getElementById('bio-name').textContent = formatName(p.prenom, p.nom);
+
+  // Texte
+  var textarea = document.getElementById('bio-text');
+  textarea.value = (pdata[id] && pdata[id].bio) || '';
+  textarea.readOnly = !canEdit;
+  textarea.style.color = canEdit ? 'var(--text)' : 'var(--text2)';
+  textarea.placeholder = canEdit ? 'Écris ta biographie ici…' : 'Aucune biographie renseignée.';
+
+  // Bouton enregistrer visible seulement si éditable
+  var saveBtn = document.getElementById('bio-save-btn');
+  if (saveBtn) saveBtn.style.display = canEdit ? '' : 'none';
+
+  document.getElementById('ov-bio').classList.add('open');
+}
+
+function closeBio() {
+  document.getElementById('ov-bio').classList.remove('open');
+  _bioPlayerId = null;
+}
+
+function saveBio() {
+  if (!_bioPlayerId) return;
+  var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === _bioPlayerId);
+  if (!canEdit) { closeBio(); return; }
+  var text = document.getElementById('bio-text').value.trim();
+  if (!pdata[_bioPlayerId]) pdata[_bioPlayerId] = {};
+  pdata[_bioPlayerId].bio = text;
+  db.ref('playerProfiles/' + _bioPlayerId + '/bio').set(text).then(function() {
+    closeBio();
+  }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
 }
 
 function adminToggleNotifPause() {
