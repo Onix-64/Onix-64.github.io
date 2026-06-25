@@ -1421,78 +1421,103 @@ function teamSelectHTML(selectId, currentVal) {
 
 function renderResultEditorBody(matchId, group, saved) {
   var assignments = (saved && saved.assignments) || {};
-  var guests = (saved && saved.guests) || [];
-  var scoreA = (saved && saved.scoreA !== undefined) ? saved.scoreA : '';
-  var scoreB = (saved && saved.scoreB !== undefined) ? saved.scoreB : '';
+  var guests      = (saved && saved.guests)      || [];
+  var scoreA = (saved && saved.scoreA !== undefined && saved.scoreA !== null) ? saved.scoreA : '';
+  var scoreB = (saved && saved.scoreB !== undefined && saved.scoreB !== null) ? saved.scoreB : '';
 
-  var rowsHTML = group.map(function(p, idx) {
-    var def = assignments[p.id] || (idx % 2 === 0 ? 'A' : 'B');
-    return '<div class="fiche-field" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">'
-      + '<div style="font-size:13px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+formatName(p.prenom,p.nom)+'</div>'
-      + teamSelectHTML('res-team-'+p.id, def)
-      + '</div>';
-  }).join('');
+  // Sépare gardiens et joueurs de champ
+  var goals  = group.filter(function(p){ return p.role === 'gardien'; });
+  var fields = group.filter(function(p){ return p.role !== 'gardien'; });
 
-  var guestsHTML = '<div id="res-guests-list">'
-    + guests.map(function(g) { return guestRowHTML(g.uid, g.name, g.team); }).join('')
+  // Affectation par défaut alternée, ou depuis la sauvegarde
+  function teamFor(arr, idx) {
+    if (assignments[arr[idx].id]) return assignments[arr[idx].id];
+    return idx % 2 === 0 ? 'A' : 'B';
+  }
+
+  var allPlayers = [];
+  fields.forEach(function(p, i){ allPlayers.push({ id: p.id, name: formatName(p.prenom, p.nom), team: teamFor(fields, i), isGoal: false, isGuest: false }); });
+  goals.forEach(function(p, i){  allPlayers.push({ id: p.id, name: formatName(p.prenom, p.nom), team: teamFor(goals, i),  isGoal: true,  isGuest: false }); });
+  guests.forEach(function(g){    allPlayers.push({ id: g.uid, name: g.name, team: g.team || 'A', isGoal: false, isGuest: true }); });
+
+  window._resPlayers = allPlayers;
+  window._resMatchId = matchId;
+
+  var colA = '<div style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-md);padding:12px;">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;text-align:center;">Équipe A</div>'
+    + '<input type="number" min="0" id="res-score-a" value="' + scoreA + '" placeholder="0"'
+    + ' style="display:block;width:56px;margin:0 auto 10px;text-align:center;font-size:28px;font-weight:900;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px;color:var(--gold);font-family:inherit;" />'
+    + '<div id="res-team-A-list" style="display:flex;flex-direction:column;gap:4px;min-height:20px;"></div>'
+    + '</div>';
+
+  var colB = '<div style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-md);padding:12px;">'
+    + '<div style="font-size:11px;font-weight:800;color:#5b9cf6;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;text-align:center;">Équipe B</div>'
+    + '<input type="number" min="0" id="res-score-b" value="' + scoreB + '" placeholder="0"'
+    + ' style="display:block;width:56px;margin:0 auto 10px;text-align:center;font-size:28px;font-weight:900;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px;color:#5b9cf6;font-family:inherit;" />'
+    + '<div id="res-team-B-list" style="display:flex;flex-direction:column;gap:4px;min-height:20px;"></div>'
     + '</div>';
 
   document.getElementById('res-body').innerHTML =
-    '<div class="fiche-section">'
-    + '<div class="fiche-section-lbl">Groupe (selon le sondage)</div>'
-    + (rowsHTML || '<div class="fiche-field"><div class="tgl-sub">Aucun joueur n\'avait voté présent/dispo si besoin.</div></div>')
-    + '</div>'
-    + '<div class="fiche-section" style="padding:14px;">'
-    + '<div class="fiche-section-lbl" style="padding-top:0;margin-bottom:10px;">Joueurs extérieurs (dépannage)</div>'
-    + guestsHTML
-    + '<button class="save-btn" style="background:var(--bg4);color:var(--text);margin-top:4px;" onclick="addGuestRow(\''+matchId+'\')">+ Ajouter un joueur extérieur</button>'
-    + '</div>'
-    + '<div class="fiche-section" style="padding:14px;">'
-    + '<div class="fiche-section-lbl" style="padding-top:0;margin-bottom:10px;">Score</div>'
-    + '<div style="display:flex;align-items:center;justify-content:center;gap:14px;">'
-    + '<input class="fiche-input" type="number" min="0" id="res-score-a" value="'+scoreA+'" placeholder="0" style="text-align:center;font-size:22px;font-weight:800;background:var(--bg);border-radius:var(--r-sm);padding:8px;width:64px;" />'
-    + '<span style="font-weight:800;color:var(--text3);">-</span>'
-    + '<input class="fiche-input" type="number" min="0" id="res-score-b" value="'+scoreB+'" placeholder="0" style="text-align:center;font-size:22px;font-weight:800;background:var(--bg);border-radius:var(--r-sm);padding:8px;width:64px;" />'
-    + '</div>'
-    + '</div>'
-    + '<button class="save-btn" onclick="saveResult(\''+matchId+'\')">Enregistrer le résultat</button>'
-    + (saved ? '<button class="save-btn" style="background:var(--red-bg);color:var(--red);margin-top:8px;" onclick="deleteResult(\''+matchId+'\')">Supprimer le résultat</button>' : '');
+    '<div style="display:flex;gap:10px;margin-bottom:14px;">' + colA + colB + '</div>'
+    + '<button onclick="addGuestRow()" style="width:100%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);border-radius:var(--r-md);padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;margin-bottom:14px;">+ Joueur extérieur</button>'
+    + '<button class="save-btn" onclick="saveResult(\'' + matchId + '\')">Enregistrer le résultat</button>'
+    + (saved ? '<button class="save-btn" style="background:var(--red-bg);color:var(--red);margin-top:8px;" onclick="deleteResult(\'' + matchId + '\')">Supprimer le résultat</button>' : '');
+
+  renderTeamColumns();
 }
 
-function guestRowHTML(uid, name, team) {
-  return '<div class="fiche-field" id="res-guest-row-'+uid+'" style="display:flex;align-items:center;gap:8px;">'
-    + '<input class="fiche-input" type="text" id="res-guest-name-'+uid+'" value="'+(name||'')+'" placeholder="Nom du joueur" style="flex:1;background:var(--bg);border-radius:var(--r-sm);padding:8px 10px;" />'
-    + teamSelectHTML('res-guest-team-'+uid, team||'A')
-    + '<span style="color:var(--red);font-size:18px;cursor:pointer;padding:0 4px;" onclick="removeGuestRow(\''+uid+'\')">&#10005;</span>'
-    + '</div>';
+function renderTeamColumns() {
+  var listA = document.getElementById('res-team-A-list');
+  var listB = document.getElementById('res-team-B-list');
+  if (!listA || !listB) return;
+  listA.innerHTML = ''; listB.innerHTML = '';
+  (window._resPlayers || []).forEach(function(p) {
+    var el = document.createElement('div');
+    el.style.cssText = 'display:flex;align-items:center;background:var(--bg);border-radius:var(--r-sm);padding:5px 8px;gap:4px;';
+    var badges = (p.isGoal ? '<span style="font-size:9px;color:var(--text3);font-weight:700;margin-left:2px;">GK</span>' : '')
+               + (p.isGuest ? '<span style="font-size:9px;color:var(--gold);font-weight:700;margin-left:2px;">EXT</span>' : '');
+    var nameDiv = '<div style="font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.name + badges + '</div>';
+    var otherTeam = p.team === 'A' ? 'B' : 'A';
+    var switchBtn = '<button onclick="switchResPlayer('' + p.id + '')" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);border-radius:var(--r-sm);padding:3px 7px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→ ' + otherTeam + '</button>';
+    var removeBtn = p.isGuest
+      ? '<button onclick="removeResPlayer('' + p.id + '')" style="background:none;border:none;color:var(--red);font-size:15px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;">✕</button>'
+      : '';
+    el.innerHTML = nameDiv + switchBtn + removeBtn;
+    if (p.team === 'A') listA.appendChild(el); else listB.appendChild(el);
+  });
 }
 
-function addGuestRow(matchId) {
-  resultGuestCounter++;
-  var uid = 'g' + Date.now() + resultGuestCounter;
-  var container = document.getElementById('res-guests-list');
-  if (container) container.insertAdjacentHTML('beforeend', guestRowHTML(uid, '', 'A'));
+function switchResPlayer(pid) {
+  var p = (window._resPlayers || []).find(function(x){ return String(x.id) === String(pid); });
+  if (p) p.team = p.team === 'A' ? 'B' : 'A';
+  renderTeamColumns();
 }
 
-function removeGuestRow(uid) {
-  var row = document.getElementById('res-guest-row-' + uid);
-  if (row) row.remove();
+function removeResPlayer(uid) {
+  window._resPlayers = (window._resPlayers || []).filter(function(p){ return String(p.id) !== String(uid); });
+  renderTeamColumns();
+}
+
+function addGuestRow() {
+  var name = prompt('Nom du joueur extérieur :');
+  if (!name || !name.trim()) return;
+  var uid = 'g' + Date.now();
+  (window._resPlayers = window._resPlayers || []).push({ id: uid, name: name.trim(), team: 'A', isGoal: false, isGuest: true });
+  renderTeamColumns();
 }
 
 function saveResult(matchId) {
+  var players = window._resPlayers || [];
+
+  // Construit assignments (id → équipe) pour les joueurs du groupe
   var assignments = {};
-  document.querySelectorAll('select[id^="res-team-"]').forEach(function(sel) {
-    var pid = sel.id.replace('res-team-', '');
-    assignments[pid] = sel.value;
+  players.filter(function(p){ return !p.isGuest; }).forEach(function(p) {
+    assignments[p.id] = p.team;
   });
 
-  var guests = [];
-  document.querySelectorAll('#res-guests-list [id^="res-guest-row-"]').forEach(function(row) {
-    var uid = row.id.replace('res-guest-row-', '');
-    var nameEl = document.getElementById('res-guest-name-' + uid);
-    var teamEl = document.getElementById('res-guest-team-' + uid);
-    var name = nameEl ? nameEl.value.trim() : '';
-    if (name) guests.push({ uid: uid, name: name, team: teamEl ? teamEl.value : 'A' });
+  // Construit la liste des joueurs extérieurs
+  var guests = players.filter(function(p){ return p.isGuest; }).map(function(p) {
+    return { uid: p.id, name: p.name, team: p.team };
   });
 
   var scoreAraw = document.getElementById('res-score-a').value;
@@ -1514,6 +1539,7 @@ function saveResult(matchId) {
     alert("Erreur lors de l'enregistrement du résultat.");
   });
 }
+
 
 function deleteResult(matchId) {
   if (!confirm('Supprimer le résultat de ce match ?')) return;
