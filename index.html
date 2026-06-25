@@ -1022,6 +1022,8 @@ function pRow(p) {
 
 function openFiche(id) {
   var p = PLAYERS.find(function(x){return x.id===id;});
+  if (!p) return;
+  if (!pdata[id]) pdata[id] = {};
   var d = pdata[id];
   var isGoal = p.role==='gardien';
   var matchCount = planning.reduce(function(a,m){return a+(m.players.concat(m.goalkeepers).some(function(x){return x.id===id;})?1:0);},0);
@@ -1123,6 +1125,7 @@ function openFiche(id) {
 // Affiche soit la photo de profil (si presente), soit les initiales par defaut.
 function renderFicheAvatar(id) {
   var p = PLAYERS.find(function(x){return x.id===id;});
+  if (!pdata[id]) pdata[id] = {};
   var d = pdata[id];
   var isGoal = p.role==='gardien';
   var avStyle = isGoal ? '' : 'background:'+p.color+';color:#0d0d0d';
