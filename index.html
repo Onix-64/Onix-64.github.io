@@ -1696,14 +1696,14 @@ var _bioPlayerId = null;
 
 function openBio(id) {
   var p = PLAYERS.find(function(x){ return x.id === id; });
+  if (!p) return;
   _bioPlayerId = id;
   var canEdit = currentUser && (currentUser.isAdmin || currentUser.id === id);
 
   // Avatar
   var avEl = document.getElementById('bio-av');
-  var color = playerColor(id);
-  avEl.style.background = color + '33';
-  avEl.style.color = color;
+  avEl.style.background = p.color || '#e8c14a';
+  avEl.style.color = '#0d0d0d';
   avEl.textContent = (p.prenom[0] + p.nom[0]).toUpperCase();
 
   // Nom
