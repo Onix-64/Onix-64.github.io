@@ -123,6 +123,8 @@
     @keyframes fadeScale { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
     .bio-av { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
     #ov-bio { align-items:center; z-index:300; }
+    #bio-text { color:var(--text); background:transparent; }
+    body.theme-light #bio-text { background:var(--bg3); color:var(--text); border-radius:var(--r-sm); padding:10px; }
     .modal { background:var(--bg2); border-radius:var(--r-lg) var(--r-lg) 0 0; border-top:0.5px solid var(--border); width:100%; max-width:480px; max-height:88vh; overflow-y:auto; padding-bottom:24px; animation:slideUp 0.25s ease; }
     @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
     .modal-handle { width:36px; height:4px; background:var(--border2); border-radius:2px; margin:12px auto 0; }
@@ -523,7 +525,7 @@
       <button onclick="closeBio()" style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button>
     </div>
     <div style="border-top:0.5px solid var(--border);padding-top:14px;">
-      <textarea id="bio-text" placeholder="Écris ta biographie ici…" style="width:100%;min-height:140px;resize:vertical;background:transparent;border:none;outline:none;font-size:14px;line-height:1.7;color:var(--text);font-family:inherit;"></textarea>
+      <textarea id="bio-text" placeholder="Écris ta biographie ici…" style="width:100%;min-height:140px;resize:vertical;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;"></textarea>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
       <button onclick="closeBio()" style="padding:9px 18px;font-size:13px;font-weight:700;border-radius:var(--r-md);border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;">Fermer</button>
@@ -1709,7 +1711,6 @@ function openBio(id) {
   var textarea = document.getElementById('bio-text');
   textarea.value = (pdata[id] && pdata[id].bio) || '';
   textarea.readOnly = !canEditBio;
-  textarea.style.color = canEditBio ? 'var(--text)' : 'var(--text2)';
   textarea.placeholder = canEditBio ? 'Écris la biographie ici…' : 'Aucune biographie renseignée.';
 
   var saveBtn = document.getElementById('bio-save-btn');
