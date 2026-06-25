@@ -1478,9 +1478,9 @@ function renderTeamColumns() {
                + (p.isGuest ? '<span style="font-size:9px;color:var(--gold);font-weight:700;margin-left:2px;">EXT</span>' : '');
     var nameDiv = '<div style="font-size:12px;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.name + badges + '</div>';
     var otherTeam = p.team === 'A' ? 'B' : 'A';
-    var switchBtn = '<button onclick="switchResPlayer('' + p.id + '')" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);border-radius:var(--r-sm);padding:3px 7px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→ ' + otherTeam + '</button>';
+    var switchBtn = '<button onclick="switchResPlayer(' + JSON.stringify(String(p.id)) + ')" style="background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);border-radius:var(--r-sm);padding:3px 7px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">→ ' + otherTeam + '</button>';
     var removeBtn = p.isGuest
-      ? '<button onclick="removeResPlayer('' + p.id + '')" style="background:none;border:none;color:var(--red);font-size:15px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;">✕</button>'
+      ? '<button onclick="removeResPlayer(' + JSON.stringify(String(p.id)) + ')" style="background:none;border:none;color:var(--red);font-size:15px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;">✕</button>'
       : '';
     el.innerHTML = nameDiv + switchBtn + removeBtn;
     if (p.team === 'A') listA.appendChild(el); else listB.appendChild(el);
