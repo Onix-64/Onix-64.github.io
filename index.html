@@ -119,7 +119,11 @@
 
     .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:flex-end; justify-content:center; }
     .overlay.open { display:flex; }
-    .bio-bubble { display:block; background:var(--bg2); border-radius:var(--r-lg); border:0.5px solid var(--border); width:calc(100% - 48px); max-width:400px; padding:20px; animation:fadeScale 0.2s ease; position:relative; }
+    .bio-bubble { display:block; background:var(--bg2); border-radius:var(--r-lg); border:0.5px solid var(--border); width:calc(100% - 48px); max-width:480px; max-height:80vh; overflow-y:auto; padding:20px; animation:fadeScale 0.2s ease; position:relative; }
+    @media (max-height: 600px) { .bio-bubble { max-height:90vh; } }
+    @media (min-width: 600px)  { .bio-bubble { width:70vw; } }
+    @media (min-width: 900px)  { .bio-bubble { width:50vw; max-width:560px; } }
+    #bio-text { min-height:clamp(80px, 20vh, 220px); }
     @keyframes fadeScale { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
     .bio-av { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
     #ov-bio { align-items:center; z-index:300; }
@@ -678,7 +682,7 @@ const DEFAULT_CLUBS = {};
 
 var pdata = {};
 PLAYERS.forEach(function(p) {
-  pdata[p.id] = {surnoms:'', ddn:'', pied:'Droit', club:DEFAULT_CLUBS[p.id]||'', disponibilites:'', photo:''};
+  pdata[p.id] = {surnoms:'', ddn:'', pied:'Droit', club:DEFAULT_CLUBS[p.id]||'', disponibilites:'', photo:'', bio:''};
 });
 
 // Les fiches joueurs (infos + photo) sont synchronisees via Firebase afin de
@@ -695,6 +699,7 @@ function loadPlayerProfiles() {
         pdata[pid].club = entry.club || '';
         pdata[pid].disponibilites = entry.disponibilites || '';
         pdata[pid].photo = entry.photo || '';
+        pdata[pid].bio = entry.bio || '';
       }
     });
     if (document.getElementById('screen-players').classList.contains('active')) renderPlayers();
