@@ -1045,7 +1045,7 @@ function openFiche(id) {
     : '';
 
   document.getElementById('fiche-head').innerHTML =
-    '<button class="close-btn" onclick="'+(canEditProfil ? 'saveAndClose('+id+')' : 'closeOv(\'ov-player\')')+'">\u2715</button>'
+    '<button class="close-btn" onclick="'+(canEditProfil ? 'saveAndClose('+id+')' : 'closeOv(\'ov-player\')')+'">&#10005;</button>'
     + '<div style="text-align:center;padding-top:8px">'
     + avWrapOpen
     + '<div class="fiche-av-inner" id="fiche-av-inner"></div>'
@@ -1070,25 +1070,31 @@ function openFiche(id) {
       + '<div style="font-size:14px;font-weight:500;color:'+(val?'var(--text)':'var(--text3)')+';">'+(val||'—')+'</div></div>';
   }
 
+  var ddn   = d.ddn   || '';
+  var surnoms = d.surnoms || '';
+  var pied  = d.pied  || '';
+  var club  = d.club  || '';
+  var dispo = d.disponibilites || '';
+
   var ddnHtml = canEditProfil
-    ? '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><input class="fiche-input" type="date" id="f-ddn" value="'+d.ddn+'" /></div>'
-    : '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><div style="font-size:14px;font-weight:500;color:'+(d.ddn?'var(--text)':'var(--text3)')+';">'+(d.ddn || '—')+'</div></div>';
+    ? '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><input class="fiche-input" type="date" id="f-ddn" value="'+ddn+'" /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Date de naissance</div><div style="font-size:14px;font-weight:500;color:'+(ddn?'var(--text)':'var(--text3)')+';">'+(ddn || '—')+'</div></div>';
 
   var piedHtml = canEditProfil
-    ? '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><select class="fiche-select" id="f-pied">'+['Droit','Gauche','Les deux'].map(function(v){return '<option '+(d.pied===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
-    : '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><div style="font-size:14px;font-weight:500;color:var(--text);">'+(d.pied||'—')+'</div></div>';
+    ? '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><select class="fiche-select" id="f-pied">'+['Droit','Gauche','Les deux'].map(function(v){return '<option '+(pied===v?'selected':'')+'>'+v+'</option>';}).join('')+'</select></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Pied préféré</div><div style="font-size:14px;font-weight:500;color:var(--text);">'+(pied||'—')+'</div></div>';
 
   var surnomsHtml = canEditProfil
-    ? '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><input class="fiche-input" type="text" id="f-surnoms" value="'+d.surnoms+'" placeholder="Rousse, Nono..." /></div>'
-    : '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><div style="font-size:14px;font-weight:500;color:'+(d.surnoms?'var(--text)':'var(--text3)')+';">'+(d.surnoms||'—')+'</div></div>';
+    ? '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><input class="fiche-input" type="text" id="f-surnoms" value="'+surnoms+'" placeholder="Rousse, Nono..." /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Surnoms</div><div style="font-size:14px;font-weight:500;color:'+(surnoms?'var(--text)':'var(--text3)')+';">'+(surnoms||'—')+'</div></div>';
 
   var clubHtml = canEditProfil
-    ? '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><input class="fiche-input" type="text" id="f-club" value="'+d.club+'" placeholder="PSG, OM..." /></div>'
-    : '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><div style="font-size:14px;font-weight:500;color:'+(d.club?'var(--text)':'var(--text3)')+';">'+(d.club||'—')+'</div></div>';
+    ? '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><input class="fiche-input" type="text" id="f-club" value="'+club+'" placeholder="PSG, OM..." /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Club favori</div><div style="font-size:14px;font-weight:500;color:'+(club?'var(--text)':'var(--text3)')+';">'+(club||'—')+'</div></div>';
 
   var dispoHtml = canEditProfil
-    ? '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><input class="fiche-input" type="text" id="f-dispo" value="'+d.disponibilites+'" placeholder="Tous les mardis..." /></div>'
-    : '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><div style="font-size:14px;font-weight:500;color:'+(d.disponibilites?'var(--text)':'var(--text3)')+';">'+(d.disponibilites||'—')+'</div></div>';
+    ? '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><input class="fiche-input" type="text" id="f-dispo" value="'+dispo+'" placeholder="Tous les mardis..." /></div>'
+    : '<div class="fiche-field"><div class="fiche-lbl">Disponibilités</div><div style="font-size:14px;font-weight:500;color:'+(dispo?'var(--text)':'var(--text3)')+';">'+(dispo||'—')+'</div></div>';
 
   var saveBtn = canEditProfil
     ? '<button class="save-btn" onclick="saveAndClose('+id+')">Enregistrer</button>'
@@ -1724,12 +1730,15 @@ function closeBio() {
 }
 
 function saveBio() {
-  if (!_bioPlayerId) return;
-  if (!currentUser || !currentUser.isAdmin) { closeBio(); return; }
+  console.log('saveBio appelé, _bioPlayerId=', _bioPlayerId, 'isAdmin=', currentUser && currentUser.isAdmin);
+  if (!_bioPlayerId) { console.log('saveBio: _bioPlayerId null, abandon'); return; }
+  if (!currentUser || !currentUser.isAdmin) { console.log('saveBio: pas admin, abandon'); closeBio(); return; }
   var text = document.getElementById('bio-text').value.trim();
+  console.log('saveBio: texte=', text, 'path=playerProfiles/'+_bioPlayerId+'/bio');
   if (!pdata[_bioPlayerId]) pdata[_bioPlayerId] = {};
   pdata[_bioPlayerId].bio = text;
   db.ref('playerProfiles/' + _bioPlayerId + '/bio').set(text).then(function() {
+    console.log('saveBio: enregistré avec succès');
     closeBio();
   }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
 }
