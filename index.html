@@ -119,11 +119,10 @@
 
     .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:flex-end; justify-content:center; }
     .overlay.open { display:flex; }
-    .bio-bubble { display:block; background:var(--bg2); border-radius:var(--r-lg); border:0.5px solid var(--border); width:calc(100% - 48px); max-width:480px; max-height:80vh; overflow-y:auto; padding:20px; animation:fadeScale 0.2s ease; position:relative; }
-    @media (max-height: 600px) { .bio-bubble { max-height:90vh; } }
+    .bio-bubble { display:flex; flex-direction:column; background:var(--bg2); border-radius:var(--r-lg); border:0.5px solid var(--border); width:calc(100% - 48px); max-width:480px; height:85vh; padding:20px; animation:fadeScale 0.2s ease; position:relative; box-sizing:border-box; }
+    #bio-text { flex:1; min-height:0; resize:none; }
     @media (min-width: 600px)  { .bio-bubble { width:70vw; } }
     @media (min-width: 900px)  { .bio-bubble { width:50vw; max-width:560px; } }
-    #bio-text { min-height:clamp(80px, 20vh, 220px); }
     @keyframes fadeScale { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
     .bio-av { width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; flex-shrink:0; }
     #ov-bio { align-items:center; z-index:300; }
@@ -528,8 +527,8 @@
       </div>
       <button onclick="closeBio()" style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button>
     </div>
-    <div style="border-top:0.5px solid var(--border);padding-top:14px;">
-      <textarea id="bio-text" placeholder="Écris ta biographie ici…" style="width:100%;min-height:140px;resize:vertical;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;"></textarea>
+    <div style="border-top:0.5px solid var(--border);padding-top:14px;flex:1;display:flex;flex-direction:column;min-height:0;">
+      <textarea id="bio-text" placeholder="Écris ta biographie ici…" style="width:100%;flex:1;min-height:0;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;"></textarea>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
       <button onclick="closeBio()" style="padding:9px 18px;font-size:13px;font-weight:700;border-radius:var(--r-md);border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;">Fermer</button>
@@ -1708,7 +1707,7 @@ var _bioPlayerId = null;
 function openBio(id) {
   var p = PLAYERS.find(function(x){ return x.id === id; });
   if (!p) return;
-  _bioPlayerId = id;
+  _bioPlayerId = parseInt(id, 10);
   var canEditBio = currentUser && currentUser.isAdmin;
 
   var avEl = document.getElementById('bio-av');
