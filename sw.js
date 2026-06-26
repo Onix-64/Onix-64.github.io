@@ -1,4 +1,4 @@
-const CACHE_NAME = 'foot-mardi-v32';
+const CACHE_NAME = 'foot-mardi-v33';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png', '/pin-ball-dark-v2.png', '/pin-ball-light.png'];
 
 self.addEventListener('install', event => {
