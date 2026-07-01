@@ -528,7 +528,8 @@
       <button onclick="closeBio()" style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button>
     </div>
     <div style="border-top:0.5px solid var(--border);padding-top:14px;flex:1;display:flex;flex-direction:column;min-height:0;">
-      <textarea id="bio-text" placeholder="Écris ta biographie ici…" style="width:100%;flex:1;min-height:0;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;text-align:justify;"></textarea>
+      <div id="bio-readonly" style="display:none;flex:1;overflow-y:auto;font-size:14px;line-height:1.7;color:var(--text);text-align:justify;white-space:pre-wrap;"></div>
+      <textarea id="bio-text" placeholder="Écris la biographie ici…" style="display:none;width:100%;flex:1;min-height:0;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;text-align:justify;"></textarea>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
       <button onclick="closeBio()" style="padding:9px 18px;font-size:13px;font-weight:700;border-radius:var(--r-md);border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;">Fermer</button>
@@ -1718,9 +1719,20 @@ function openBio(id) {
   document.getElementById('bio-name').textContent = formatName(p.prenom, p.nom);
 
   var textarea = document.getElementById('bio-text');
-  textarea.value = (pdata[id] && pdata[id].bio) || '';
-  textarea.readOnly = !canEditBio;
-  textarea.placeholder = canEditBio ? 'Écris la biographie ici…' : 'Aucune biographie renseignée.';
+  var readonlyDiv = document.getElementById('bio-readonly');
+  var bioText = (pdata[id] && pdata[id].bio) || '';
+
+  if (canEditBio) {
+    textarea.style.display = 'block';
+    readonlyDiv.style.display = 'none';
+    textarea.value = bioText;
+    textarea.placeholder = 'Écris la biographie ici…';
+  } else {
+    textarea.style.display = 'none';
+    readonlyDiv.style.display = 'block';
+    readonlyDiv.textContent = bioText || 'Aucune biographie renseignée.';
+    readonlyDiv.style.color = bioText ? 'var(--text)' : 'var(--text3)';
+  }
 
   var saveBtn = document.getElementById('bio-save-btn');
   if (saveBtn) saveBtn.style.display = canEditBio ? '' : 'none';
