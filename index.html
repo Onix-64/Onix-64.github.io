@@ -516,7 +516,7 @@
 
 <div class="overlay" id="ov-bio" onclick="closeBio()">
   <div class="bio-bubble" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-shrink:0;">
       <div style="display:flex;align-items:center;gap:10px;">
         <div class="bio-av" id="bio-av"></div>
         <div>
@@ -526,13 +526,11 @@
       </div>
       <button onclick="closeBio()" style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button>
     </div>
-    <div style="border-top:0.5px solid var(--border);padding-top:14px;flex:1;display:flex;flex-direction:column;min-height:0;">
-      <div style="flex:1;min-height:0;overflow-y:auto;margin-right:-20px;padding-right:20px;">
-        <div id="bio-readonly" style="display:none;font-size:14px;line-height:1.7;color:var(--text);text-align:left;white-space:pre-wrap;word-break:break-word;"></div>
-      </div>
-      <textarea id="bio-text" placeholder="Écris la biographie ici…" style="display:none;width:100%;flex:1;min-height:0;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;text-align:justify;"></textarea>
+    <div style="border-top:0.5px solid var(--border);padding-top:14px;flex:1;min-height:0;overflow-y:auto;">
+      <div id="bio-readonly" style="font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;"></div>
+      <textarea id="bio-text" placeholder="Écris la biographie ici…" style="display:none;width:100%;height:100%;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;resize:none;background:transparent;color:var(--text);"></textarea>
     </div>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);">
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);flex-shrink:0;">
       <button onclick="closeBio()" style="padding:9px 18px;font-size:13px;font-weight:700;border-radius:var(--r-md);border:0.5px solid var(--border2);background:transparent;color:var(--text2);cursor:pointer;">Fermer</button>
       <button id="bio-save-btn" onclick="saveBio()" style="padding:9px 18px;font-size:13px;font-weight:700;border-radius:var(--r-md);border:none;background:var(--gold);color:var(--bg);cursor:pointer;">Enregistrer</button>
     </div>
@@ -1724,15 +1722,12 @@ function openBio(id) {
   var bioText = (pdata[id] && pdata[id].bio) || '';
 
   if (canEditBio) {
-    textarea.style.display = 'block';
     readonlyDiv.style.display = 'none';
-    readonlyDiv.parentElement.style.overflow = 'hidden';
+    textarea.style.display = 'block';
     textarea.value = bioText;
-    textarea.placeholder = 'Écris la biographie ici…';
   } else {
     textarea.style.display = 'none';
     readonlyDiv.style.display = 'block';
-    readonlyDiv.parentElement.style.overflow = 'auto';
     readonlyDiv.textContent = bioText || 'Aucune biographie renseignée.';
     readonlyDiv.style.color = bioText ? 'var(--text)' : 'var(--text3)';
   }
