@@ -119,7 +119,7 @@
 
     .overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:flex-end; justify-content:center; }
     .overlay.open { display:flex; }
-    .bio-bubble { display:flex; flex-direction:column; background:var(--bg2); border-radius:var(--r-lg); border:0.5px solid var(--border); width:calc(100% - 48px); max-width:480px; height:85vh; padding:20px; animation:fadeScale 0.2s ease; position:relative; box-sizing:border-box; overflow:hidden; }
+    .bio-bubble { display:flex; flex-direction:column; background:var(--bg2); border-radius:var(--r-lg); border:0.5px solid var(--border); width:calc(100% - 48px); max-width:480px; height:85vh; padding:20px; animation:fadeScale 0.2s ease; position:relative; box-sizing:border-box; }
     @media (min-width: 600px)  { .bio-bubble { width:70vw; } }
     @media (min-width: 900px)  { .bio-bubble { width:50vw; max-width:560px; } }
     @keyframes fadeScale { from { opacity:0; transform:scale(0.94); } to { opacity:1; transform:scale(1); } }
@@ -527,7 +527,7 @@
       <button onclick="closeBio()" style="width:30px;height:30px;border-radius:50%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">&#10005;</button>
     </div>
     <div style="border-top:0.5px solid var(--border);padding-top:14px;flex:1;min-height:0;overflow-y:auto;">
-      <div id="bio-readonly" style="font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;"></div>
+      <div id="bio-readonly" style="display:none;font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;word-break:break-word;padding-right:2px;"></div>
       <textarea id="bio-text" placeholder="Écris la biographie ici…" style="display:none;width:100%;height:100%;border:none;outline:none;font-size:14px;line-height:1.7;font-family:inherit;box-sizing:border-box;resize:none;background:transparent;color:var(--text);"></textarea>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px;padding-top:12px;border-top:0.5px solid var(--border);flex-shrink:0;">
