@@ -637,23 +637,25 @@ var PIN_BALL_LIGHT = 'pin-ball-light.png';
 document.getElementById('ball-img').src = BALL_DARK;
 // ══ DATA ══
 const PIN_PLAYERS = [
-  {id:1,  prenom:'Arnaud',    nom:'Pommé',     pin:'1111'},
-  {id:2,  prenom:'Julien',    nom:'Pommé',     pin:'2222'},
-  {id:3,  prenom:'Benjamin',  nom:'Izuel',     pin:'3333'},
-  {id:4,  prenom:'Pierre',    nom:'Gicquel',   pin:'4444'},
-  {id:5,  prenom:'Bruno',     nom:'Prata',     pin:'5555'},
-  {id:6,  prenom:'Mickael',   nom:'Ker',       pin:'6666'},
-  {id:7,  prenom:'Aurélien',  nom:'Harireche', pin:'7777'},
-  {id:8,  prenom:'Wilfrid',   nom:'Massez',    pin:'8888'},
-  {id:9,  prenom:'Vincent',   nom:'Grillet',   pin:'9999'},
-  {id:10, prenom:'Xavier',    nom:'Micaud',    pin:'1010'},
-  {id:11, prenom:'Thomas',    nom:'Delbarre',  pin:'1122'},
-  {id:12, prenom:'JB',        nom:'Subias',    pin:'1133'},
-  {id:13, prenom:'Armando',  nom:'Perez Castro', pin:'1144'},
-  {id:14, prenom:'Jérôme',    nom:'Perona',    pin:'1155'},
-  {id:15, prenom:'Christophe',nom:'Cazenave',  pin:'1166', role:'gardien'},
-  {id:16, prenom:'Hugo',      nom:'Palais',    pin:'1177', role:'gardien'},
-  {id:0,  prenom:'Admin',     nom:'',          pin:'0000', isAdmin:true}
+  {id:1,  prenom:'Arnaud',     nom:'Pommé',        pin:'850216', isAdmin:true},
+  {id:2,  prenom:'Julien',     nom:'Pommé',        pin:'723945'},
+  {id:3,  prenom:'Benjamin',   nom:'Izuel',        pin:'896423'},
+  {id:4,  prenom:'Pierre',     nom:'Gicquel',      pin:'146597'},
+  {id:5,  prenom:'Bruno',      nom:'Prata',        pin:'298175'},
+  {id:6,  prenom:'Mickael',    nom:'Ker',          pin:'495176'},
+  {id:7,  prenom:'Aurélien',   nom:'Harireche',    pin:'542738'},
+  {id:8,  prenom:'Wilfrid',    nom:'Massez',       pin:'267054'},
+  {id:9,  prenom:'Vincent',    nom:'Grillet',      pin:'203894'},
+  {id:10, prenom:'Xavier',     nom:'Micaud',       pin:'410295'},
+  {id:11, prenom:'Thomas',     nom:'Delbarre',     pin:'380261'},
+  {id:12, prenom:'JB',         nom:'Subias',       pin:'946738'},
+  {id:13, prenom:'Armando',    nom:'Perez Castro', pin:'695827'},
+  {id:14, prenom:'Jérôme',     nom:'Perona',       pin:'048372'},
+  {id:18, prenom:'Olivier',    nom:'Barbot',       pin:'428713'},
+  {id:15, prenom:'Christophe', nom:'Cazenave',     pin:'429078', role:'gardien'},
+  {id:16, prenom:'Hugo',       nom:'Palais',       pin:'471520', role:'gardien'},
+  {id:0,  prenom:'Admin',      nom:'',             pin:'968421', isAdmin:true},
+  {id:99, prenom:'Visiteur',   nom:'',             pin:'450986', isVisitor:true}
 ];
 
 const PLAYERS = [
@@ -671,6 +673,7 @@ const PLAYERS = [
   {id:12, nom:'Subias',    prenom:'JB',         role:'joueur',  color:'#3a9ee0'},
   {id:13, nom:'Perez Castro', prenom:'Armando',    role:'joueur',  color:'#e03a9e'},
   {id:14, nom:'Perona',    prenom:'Jérôme',     role:'joueur',  color:'#3ae09e'},
+  {id:18, nom:'Barbot',    prenom:'Olivier',    role:'joueur',  color:'#e05c8a'},
   {id:15, nom:'Cazenave',  prenom:'Christophe', role:'gardien', color:'#e8c14a'},
   {id:16, nom:'Palais',    prenom:'Hugo',       role:'gardien', color:'#e8c14a'}
 ];
@@ -1591,7 +1594,10 @@ function renderNotifs() {
   refreshNotifToggle();
   var adminCard = document.getElementById('card-admin');
   var notifCard = document.getElementById('card-notifications');
-  if (currentUser && currentUser.isAdmin) {
+  if (currentUser && currentUser.isVisitor) {
+    if (adminCard) adminCard.classList.add('hidden');
+    if (notifCard) notifCard.classList.add('hidden');
+  } else if (currentUser && currentUser.isAdmin) {
     if (adminCard) adminCard.classList.remove('hidden');
     if (notifCard) notifCard.classList.add('hidden');
     renderAdminPanel();
@@ -1621,11 +1627,13 @@ function renderAdminPanel() {
     if (countEl) countEl.textContent = nbConnected + ' / ' + roster.length + " ont ouvert l'appli au moins une fois";
     if (listEl) {
       listEl.innerHTML = roster.map(function(p) {
-        var isConnected = !!connected[p.id];
-        var color = isConnected ? 'var(--green)' : 'var(--text2)';
-        var statusText = isConnected ? 'Connecté' : 'Pas encore';
+        var ts = connected[p.id] ? new Date(connected[p.id]) : null;
+        var dateStr = ts ? ts.toLocaleDateString('fr-FR', {day:'numeric', month:'short', year:'numeric'}) : null;
+        var timeStr = ts ? ts.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : null;
+        var label = ts ? (dateStr + ' à ' + timeStr) : 'Jamais connecté';
+        var color = ts ? 'var(--text2)' : 'var(--text3)';
         return '<div class="toggle-row"><div class="tgl-lbl">' + formatName(p.prenom, p.nom) + '</div>' +
-               '<span style="color:' + color + ';font-size:13px;font-weight:600">' + statusText + '</span></div>';
+               '<span style="color:' + color + ';font-size:11px;font-weight:500;text-align:right;">' + label + '</span></div>';
       }).join('');
     }
   });
@@ -1896,17 +1904,17 @@ function loginUser(user) {
   var savedTheme = localStorage.getItem('foot_theme') || 'dark';
   applyTheme(savedTheme);
   var badge = document.getElementById('user-badge');
-  badge.textContent = user.isAdmin ? 'ADMIN' : formatName(user.prenom, user.nom);
+  badge.textContent = user.isAdmin ? 'ADMIN' : user.isVisitor ? '👁 Visiteur' : formatName(user.prenom, user.nom);
   var navResults = document.getElementById('nav-results');
   if (navResults) navResults.style.display = user.isAdmin ? 'flex' : 'none';
+  var navSettings = document.getElementById('nav-settings');
+  if (navSettings) navSettings.style.display = 'flex';
   listenVotes(getMatchId(planning[0]));
-  if (!user.isAdmin) {
+  if (!user.isAdmin && !user.isVisitor) {
     db.ref('connectedPlayers/' + user.id).set(firebase.database.ServerValue.TIMESTAMP);
-    // Activation automatique des notifications push si pas encore fait
     if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'denied') {
       db.ref('fcmTokens/' + user.id).once('value').then(function(snap) {
         if (!snap.exists() || !snap.val()) {
-          // Pas encore de token pour ce joueur : on demande l'autorisation
           enableNotifications();
         }
       });
@@ -1918,7 +1926,7 @@ function loginUser(user) {
 
 // ══ VOTE JOUEUR ══
 function castVote(choice) {
-  if (!currentUser || currentUser.isAdmin) return;
+  if (!currentUser || currentUser.isAdmin || currentUser.isVisitor) return;
   var pid = currentUser.id;
 
   // Vérifier que le choix est autorisé selon la situation du joueur
