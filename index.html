@@ -251,12 +251,14 @@
 <div id="pin-screen" class="hidden">
   <img class="pin-crest" id="pin-crest-img" src="pin-ball-dark-v2.png" alt="">
   <div class="pin-welcome">Champions Soccer</div>
-  <div class="pin-sub">Entrez votre code PIN à 4 chiffres</div>
+  <div class="pin-sub">Entrez votre code PIN à 6 chiffres</div>
   <div class="pin-dots">
     <div class="pin-dot" id="pd0"></div>
     <div class="pin-dot" id="pd1"></div>
     <div class="pin-dot" id="pd2"></div>
     <div class="pin-dot" id="pd3"></div>
+    <div class="pin-dot" id="pd4"></div>
+    <div class="pin-dot" id="pd5"></div>
   </div>
   <div class="pin-keypad">
     <div class="pin-key" onclick="pinKey('1')">1</div>
@@ -1870,10 +1872,10 @@ var currentUser = null;
 var pinBuffer = '';
 
 function pinKey(digit) {
-  if (pinBuffer.length >= 4) return;
+  if (pinBuffer.length >= 6) return;
   pinBuffer += digit;
   updateDots(false);
-  if (pinBuffer.length === 4) setTimeout(checkPin, 150);
+  if (pinBuffer.length === 6) setTimeout(checkPin, 150);
 }
 function pinDel() {
   pinBuffer = pinBuffer.slice(0,-1);
@@ -1881,7 +1883,7 @@ function pinDel() {
   updateDots(false);
 }
 function updateDots(isErr) {
-  for (var i=0; i<4; i++) {
+  for (var i=0; i<6; i++) {
     var dot = document.getElementById('pd'+i);
     dot.classList.remove('filled','error');
     if (i < pinBuffer.length) dot.classList.add(isErr?'error':'filled');
