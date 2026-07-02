@@ -1941,9 +1941,9 @@ function loginUser(user) {
     }
     db.ref('connectedVisitors/' + visitorKey).set(firebase.database.ServerValue.TIMESTAMP);
   }
-  if (!user.isAdmin && !user.isVisitor) {
+  if (!user.isVisitor && user.id !== 0) {
     db.ref('connectedPlayers/' + user.id).set(firebase.database.ServerValue.TIMESTAMP);
-    if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'denied') {
+    if (!user.isAdmin && 'Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'denied') {
       db.ref('fcmTokens/' + user.id).once('value').then(function(snap) {
         if (!snap.exists() || !snap.val()) {
           enableNotifications();
