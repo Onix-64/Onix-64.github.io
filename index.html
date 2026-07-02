@@ -1622,7 +1622,7 @@ function renderAdminPanel() {
 
   db.ref('connectedPlayers').once('value').then(function(snap) {
     var connected = snap.val() || {};
-    var roster = PIN_PLAYERS.filter(function(p){ return !p.isAdmin; });
+    var roster = PIN_PLAYERS.filter(function(p){ return p.id !== 0 && !p.isVisitor; });
     var nbConnected = roster.filter(function(p){ return connected[p.id]; }).length;
     var countEl = document.getElementById('admin-connected-count');
     var listEl = document.getElementById('admin-connected-list');
