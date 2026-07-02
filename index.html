@@ -1639,6 +1639,26 @@ function renderAdminPanel() {
       }).join('');
     }
   });
+
+  // Visiteurs
+  db.ref('connectedVisitors').once('value').then(function(snap) {
+    var visitors = snap.val() || {};
+    var keys = Object.keys(visitors);
+    var nbVisitors = keys.length;
+    var listEl = document.getElementById('admin-connected-list');
+    if (!listEl) return;
+    if (nbVisitors === 0) return;
+    // Trouver la dernière connexion visiteur
+    var lastTs = keys.reduce(function(max, k) { return visitors[k] > max ? visitors[k] : max; }, 0);
+    var ts = lastTs ? new Date(lastTs) : null;
+    var dateStr = ts ? ts.toLocaleDateString('fr-FR', {day:'numeric', month:'short', year:'numeric'}) : '';
+    var timeStr = ts ? ts.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '';
+    listEl.innerHTML += '<div class="toggle-row" style="margin-top:8px;border-top:0.5px solid var(--border);padding-top:8px;">'
+      + '<div class="tgl-lbl" style="color:var(--gold);">👁 Visiteurs</div>'
+      + '<span style="color:var(--text2);font-size:11px;font-weight:500;text-align:right;">'
+      + nbVisitors + ' appareil' + (nbVisitors > 1 ? 's' : '') + ' · dernier ' + dateStr + ' à ' + timeStr
+      + '</span></div>';
+  });
 }
 
 function adminResetVotes() {
@@ -1912,6 +1932,15 @@ function loginUser(user) {
   var navSettings = document.getElementById('nav-settings');
   if (navSettings) navSettings.style.display = 'flex';
   listenVotes(getMatchId(planning[0]));
+  if (user.isVisitor) {
+    // Enregistre la connexion visiteur avec un ID unique basé sur l'appareil
+    var visitorKey = localStorage.getItem('foot_visitor_key');
+    if (!visitorKey) {
+      visitorKey = 'v_' + Date.now() + '_' + Math.random().toString(36).substr(2,6);
+      localStorage.setItem('foot_visitor_key', visitorKey);
+    }
+    db.ref('connectedVisitors/' + visitorKey).set(firebase.database.ServerValue.TIMESTAMP);
+  }
   if (!user.isAdmin && !user.isVisitor) {
     db.ref('connectedPlayers/' + user.id).set(firebase.database.ServerValue.TIMESTAMP);
     if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'denied') {
