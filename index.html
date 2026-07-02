@@ -1906,7 +1906,7 @@ function loginUser(user) {
   var savedTheme = localStorage.getItem('foot_theme') || 'dark';
   applyTheme(savedTheme);
   var badge = document.getElementById('user-badge');
-  badge.textContent = user.isAdmin ? 'ADMIN' : user.isVisitor ? '👁 Visiteur' : formatName(user.prenom, user.nom);
+  badge.textContent = (user.isAdmin && user.id === 0) ? 'ADMIN' : user.isVisitor ? '👁 Visiteur' : formatName(user.prenom, user.nom);
   var navResults = document.getElementById('nav-results');
   if (navResults) navResults.style.display = user.isAdmin ? 'flex' : 'none';
   var navSettings = document.getElementById('nav-settings');
