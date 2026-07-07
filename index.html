@@ -794,24 +794,27 @@ function rng(arr, seed) {
   return a;
 }
 
-var planning = nextTuesdays(12).map(function(date) {
-  var key = dateKey(date);
+var planning = Object.keys(FIXED_PLANNING).sort().map(function(key) {
+  var parts = key.split('-');
+  var date = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
   var fixed = FIXED_PLANNING[key];
-  if (fixed) {
-    return {
-      date: date,
-      players: fixed.players.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean),
-      goalkeepers: fixed.goalkeepers.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean)
-    };
-  }
-  // Fallback RNG si date hors planning fixe
-  var seed = key;
   return {
     date: date,
-    players: rng(PLAYERS.filter(function(p){return p.role==='joueur';}), seed+'-players').slice(0,8),
-    goalkeepers: rng(PLAYERS.filter(function(p){return p.role==='gardien';}), seed+'-goalkeepers').slice(0,2)
+    players: fixed.players.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean),
+    goalkeepers: fixed.goalkeepers.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean)
   };
 });
+
+// Prochain match à venir (ou dernier si saison terminée)
+function getNextMatchIndex() {
+  var now = new Date();
+  now.setHours(18,0,0,0);
+  for (var i = 0; i < planning.length; i++) {
+    if (planning[i].date >= now) return i;
+  }
+  return planning.length - 1;
+}
+function getNextMatch() { return planning[getNextMatchIndex()]; }
 
 // ══ VOTES (synchronisés en temps réel via Firebase) ══
 var votes = {};
@@ -859,7 +862,7 @@ function ini(p) { return (p.prenom[0] + p.nom[0]).toUpperCase(); }
 
 // ══ HOME ══
 function renderHome() {
-  var m = planning[0];
+  var m = getNextMatch();
   var all = PLAYERS; // tous les joueurs (prévus + non prévus) afin que tous les votes comptent
   var C = {present:0, pd:0, sb:0, wait:0};
   all.forEach(function(p) {
@@ -995,14 +998,18 @@ function switchPlanning(mode) {
 function renderPlanning() { renderPlanningGeneral(); }
 
 function renderPlanningGeneral() {
+  var nextIdx = getNextMatchIndex();
   document.getElementById('planning-general').innerHTML = planning.map(function(m, i) {
     var ds = m.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
     var dateCap = ds.charAt(0).toUpperCase()+ds.slice(1);
     var chips = m.players.map(function(p){return '<span class="mg-chip">'+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var gkChips = m.goalkeepers.map(function(p){return '<span class="mg-chip gk">&#129366; '+formatName(p.prenom,p.nom)+'</span>';}).join('');
+    var isPast = m.date < new Date(new Date().setHours(18,0,0,0));
+    var label = i === nextIdx ? 'Ce mardi' : (isPast ? 'Passé' : 'À venir');
+    var tsClass = i === nextIdx ? 'ts-next' : (isPast ? 'ts-plain' : 'ts-plain');
     return '<div class="match-general" onclick="openMatch('+i+')">'
       + '<div class="mg-header"><div class="mg-date">'+dateCap+'</div>'
-      + '<span class="ts '+(i===0?'ts-next':'ts-plain')+'">'+(i===0?'Ce mardi':'A venir')+'</span></div>'
+      + '<span class="ts '+tsClass+'">'+label+'</span></div>'
       + '<div class="mg-players">'+chips+gkChips+'</div>'
       + '</div>';
   }).join('');
@@ -1852,7 +1859,7 @@ function renderAdminPanel() {
 
 function adminResetVotes() {
   if (!currentUser || !currentUser.isAdmin) return;
-  var m0 = planning[0];
+  var m0 = getNextMatch();
   var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   if (!confirm('Réinitialiser tous les votes pour le match du ' + dateLabel + ' ? Cette action est irréversible.')) return;
   db.ref('matches/' + getMatchId(m0) + '/votes').remove().then(function() {
@@ -1864,7 +1871,7 @@ function adminResetVotes() {
 
 function adminTriggerNotify() {
   if (!currentUser || !currentUser.isAdmin) return;
-  var m0 = planning[0];
+  var m0 = getNextMatch();
   var matchId = getMatchId(m0);
   var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   if (!confirm('Envoyer le sondage de vote à tous les joueurs pour le match du ' + dateLabel + ' ?')) return;
@@ -1878,7 +1885,7 @@ function adminTriggerNotify() {
 
 function adminTriggerRemind() {
   if (!currentUser || !currentUser.isAdmin) return;
-  var m0 = planning[0];
+  var m0 = getNextMatch();
   var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   if (!confirm('Envoyer un rappel aux joueurs qui n\'ont pas encore voté pour le match du ' + dateLabel + ' ?')) return;
   // Ouvre GitHub Actions pour déclencher les push manuellement
@@ -2120,7 +2127,7 @@ function loginUser(user) {
   if (navResults) navResults.style.display = user.isAdmin ? 'flex' : 'none';
   var navSettings = document.getElementById('nav-settings');
   if (navSettings) navSettings.style.display = 'flex';
-  listenVotes(getMatchId(planning[0]));
+  listenVotes(getMatchId(getNextMatch()));
   if (user.isVisitor) {
     // Enregistre la connexion visiteur avec un ID unique basé sur l'appareil
     var visitorKey = localStorage.getItem('foot_visitor_key');
@@ -2150,7 +2157,7 @@ function castVote(choice) {
   var pid = currentUser.id;
 
   // Vérifier que le choix est autorisé selon la situation du joueur
-  var m0 = planning[0];
+  var m0 = getNextMatch();
   var inPlanning = m0.players.concat(m0.goalkeepers).some(function(p){ return p.id === pid; });
 
   // Joueur prévu : ne peut pas voter DISPO SI BESOIN
@@ -2199,7 +2206,7 @@ function refreshMyVote() {
   }
 
   // Vérifier si le joueur est prévu dans le planning
-  var m0 = planning[0];
+  var m0 = getNextMatch();
   var inPlanning = m0.players.concat(m0.goalkeepers).some(function(p){ return p.id === currentUser.id; });
 
   // Adapter les boutons selon la situation
@@ -2311,7 +2318,7 @@ document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible' && currentUser) {
     firebase.database().goOnline();
     // Re-brancher l'écoute temps réel pour s'assurer d'avoir les données fraîches
-    listenVotes(getMatchId(planning[0]));
+    listenVotes(getMatchId(getNextMatch()));
   }
 });
 </script>
