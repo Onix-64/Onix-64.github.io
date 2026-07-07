@@ -1005,7 +1005,7 @@ function renderPlanningGeneral() {
     var chips = m.players.map(function(p){return '<span class="mg-chip">'+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var gkChips = m.goalkeepers.map(function(p){return '<span class="mg-chip gk">🥅 '+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var isPast = m.date < new Date(new Date().setHours(18,0,0,0));
-    var label = i === nextIdx ? 'Ce mardi' : (isPast ? 'Passé' : 'À venir');
+    var label = i === nextIdx ? 'Mardi prochain' : (isPast ? 'Passé' : 'À venir');
     var tsClass = i === nextIdx ? 'ts-next' : (isPast ? 'ts-plain' : 'ts-plain');
     return '<div class="match-general" onclick="openMatch('+i+')">'
       + '<div class="mg-header"><div class="mg-date">'+dateCap+'</div>'
