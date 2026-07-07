@@ -738,23 +738,23 @@ setInterval(function() {
 
 // ══ PLANNING FIXE (saison Septembre-Décembre 2026) ══
 var FIXED_PLANNING = {
-  '2026-09-01': { players: [1,2,4,6,8,9,12,14],    goalkeepers: [15,16] },
-  '2026-09-08': { players: [3,4,5,6,7,8,12,18],    goalkeepers: [15,16] },
-  '2026-09-15': { players: [1,2,3,4,7,9,13,14],    goalkeepers: [15,16] },
-  '2026-09-22': { players: [2,4,5,6,8,9,12,18],    goalkeepers: [15,16] },
-  '2026-09-29': { players: [1,2,3,5,7,8,11,14],    goalkeepers: [15,16] },
-  '2026-10-06': { players: [1,4,7,8,9,10,12,18],   goalkeepers: [15,16] },
+  '2026-09-01': { players: [1,2,4,6,8,9,12,13],    goalkeepers: [15,16] },
+  '2026-09-08': { players: [3,4,5,6,7,8,12,14],    goalkeepers: [15,16] },
+  '2026-09-15': { players: [1,2,3,4,7,9,13,18],    goalkeepers: [15,16] },
+  '2026-09-22': { players: [2,4,5,6,8,9,12,14],    goalkeepers: [15,16] },
+  '2026-09-29': { players: [1,2,3,5,7,8,11,13],    goalkeepers: [15,16] },
+  '2026-10-06': { players: [1,4,7,8,9,10,12,14],   goalkeepers: [15,16] },
   '2026-10-13': { players: [2,3,5,6,9,13,14,18],   goalkeepers: [15,16] },
   '2026-10-20': { players: [1,2,4,7,8,9,10,12],    goalkeepers: [15,16] },
-  '2026-10-27': { players: [3,5,6,7,8,11,12,14],   goalkeepers: [15,16] },
-  '2026-11-03': { players: [1,2,3,4,6,9,10,18],    goalkeepers: [15,16] },
-  '2026-11-10': { players: [2,4,5,7,8,9,12,14],    goalkeepers: [15,16] },
-  '2026-11-17': { players: [1,3,4,6,8,10,12,18],   goalkeepers: [15,16] },
-  '2026-11-24': { players: [2,3,5,7,9,11,13,14],   goalkeepers: [15,16] },
-  '2026-12-01': { players: [1,4,6,8,9,10,12,18],   goalkeepers: [15,16] },
-  '2026-12-08': { players: [2,3,5,7,9,12,13,14],   goalkeepers: [15,16] },
+  '2026-10-27': { players: [3,5,6,7,8,11,12,13],   goalkeepers: [15,16] },
+  '2026-11-03': { players: [1,2,3,4,6,9,10,14],    goalkeepers: [15,16] },
+  '2026-11-10': { players: [2,4,5,7,8,9,12,13],    goalkeepers: [15,16] },
+  '2026-11-17': { players: [1,3,4,6,8,10,12,14],   goalkeepers: [15,16] },
+  '2026-11-24': { players: [2,3,5,7,9,11,13,18],   goalkeepers: [15,16] },
+  '2026-12-01': { players: [1,4,6,8,9,10,12,14],   goalkeepers: [15,16] },
+  '2026-12-08': { players: [2,3,5,7,9,12,13,18],   goalkeepers: [15,16] },
   '2026-12-15': { players: [1,3,4,6,7,8,10,11],    goalkeepers: [15,16] },
-  '2026-12-22': { players: [1,2,5,7,9,12,14,18],   goalkeepers: [15,16] },
+  '2026-12-22': { players: [1,2,5,7,9,12,13,14],   goalkeepers: [15,16] },
 };
 
 function nextTuesdays(n) {
@@ -1003,7 +1003,7 @@ function renderPlanningGeneral() {
     var ds = m.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
     var dateCap = ds.charAt(0).toUpperCase()+ds.slice(1);
     var chips = m.players.map(function(p){return '<span class="mg-chip">'+formatName(p.prenom,p.nom)+'</span>';}).join('');
-    var gkChips = m.goalkeepers.map(function(p){return '<span class="mg-chip gk">&#129366; '+formatName(p.prenom,p.nom)+'</span>';}).join('');
+    var gkChips = m.goalkeepers.map(function(p){return '<span class="mg-chip gk">🥅 '+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var isPast = m.date < new Date(new Date().setHours(18,0,0,0));
     var label = i === nextIdx ? 'Ce mardi' : (isPast ? 'Passé' : 'À venir');
     var tsClass = i === nextIdx ? 'ts-next' : (isPast ? 'ts-plain' : 'ts-plain');
@@ -1047,7 +1047,7 @@ function openMatch(idx) {
   }).join('');
   document.getElementById('mm-goals').innerHTML = m.goalkeepers.map(function(p) {
     return '<div class="p-chip" style="border-color:var(--gold-dim)"><div class="chip-av av-goal" style="width:30px;height:30px;font-size:10px">'+ini(p)+'</div>'
-      + '<div><div class="chip-name">'+formatName(p.prenom,p.nom)+'</div><div class="chip-role">Gardien</div></div></div>';
+      + '<div><div class="chip-name">🥅 '+formatName(p.prenom,p.nom)+'</div><div class="chip-role">Gardien</div></div></div>';
   }).join('');
   document.getElementById('ov-match').classList.add('open');
 }
