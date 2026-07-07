@@ -736,7 +736,27 @@ setInterval(function() {
   if (typeof renderHome === 'function') renderHome();
 }, 5 * 60 * 1000);
 
-// ══ PLANNING ══
+// ══ PLANNING FIXE (saison Septembre-Décembre 2026) ══
+var FIXED_PLANNING = {
+  '2026-09-01': { players: [1,2,4,6,8,9,12,14],    goalkeepers: [15,16] },
+  '2026-09-08': { players: [3,4,5,6,7,8,12,18],    goalkeepers: [15,16] },
+  '2026-09-15': { players: [1,2,3,4,7,9,13,14],    goalkeepers: [15,16] },
+  '2026-09-22': { players: [2,4,5,6,8,9,12,18],    goalkeepers: [15,16] },
+  '2026-09-29': { players: [1,2,3,5,7,8,11,14],    goalkeepers: [15,16] },
+  '2026-10-06': { players: [1,4,7,8,9,10,12,18],   goalkeepers: [15,16] },
+  '2026-10-13': { players: [2,3,5,6,9,13,14,18],   goalkeepers: [15,16] },
+  '2026-10-20': { players: [1,2,4,7,8,9,10,12],    goalkeepers: [15,16] },
+  '2026-10-27': { players: [3,5,6,7,8,11,12,14],   goalkeepers: [15,16] },
+  '2026-11-03': { players: [1,2,3,4,6,9,10,18],    goalkeepers: [15,16] },
+  '2026-11-10': { players: [2,4,5,7,8,9,12,14],    goalkeepers: [15,16] },
+  '2026-11-17': { players: [1,3,4,6,8,10,12,18],   goalkeepers: [15,16] },
+  '2026-11-24': { players: [2,3,5,7,9,11,13,14],   goalkeepers: [15,16] },
+  '2026-12-01': { players: [1,4,6,8,9,10,12,18],   goalkeepers: [15,16] },
+  '2026-12-08': { players: [2,3,5,7,9,12,13,14],   goalkeepers: [15,16] },
+  '2026-12-15': { players: [1,3,4,6,7,8,10,11],    goalkeepers: [15,16] },
+  '2026-12-22': { players: [1,2,5,7,9,12,14,18],   goalkeepers: [15,16] },
+};
+
 function nextTuesdays(n) {
   var d = new Date();
   var diff = (2 - d.getDay() + 7) % 7;
@@ -751,8 +771,6 @@ function nextTuesdays(n) {
   return arr;
 }
 
-// Mélange déterministe : seedé par une chaîne (ex: la date), donne TOUJOURS
-// le même résultat pour la même chaîne, sur tous les appareils.
 function hashStr(str) {
   var h = 0;
   for (var i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) | 0; }
@@ -777,7 +795,17 @@ function rng(arr, seed) {
 }
 
 var planning = nextTuesdays(12).map(function(date) {
-  var seed = dateKey(date);
+  var key = dateKey(date);
+  var fixed = FIXED_PLANNING[key];
+  if (fixed) {
+    return {
+      date: date,
+      players: fixed.players.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean),
+      goalkeepers: fixed.goalkeepers.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean)
+    };
+  }
+  // Fallback RNG si date hors planning fixe
+  var seed = key;
   return {
     date: date,
     players: rng(PLAYERS.filter(function(p){return p.role==='joueur';}), seed+'-players').slice(0,8),
