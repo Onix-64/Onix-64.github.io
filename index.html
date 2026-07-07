@@ -909,6 +909,31 @@ function renderHome() {
   var fillers = sbVoters.slice(0, needed);
   var groupComplete = (presentVoters.length + sbVoters.length) >= 10;
 
+  // ── Notification "groupe complet" ──
+  // On envoie UNE SEULE FOIS quand le groupe vient d'atteindre 10
+  if (groupComplete && matchNotifiedAt && !window._groupCompleteNotifSent) {
+    var combinedGroup10 = presentVoters.concat(fillers);
+    var groupCompleteNotifSentKey = 'groupCompleteNotif_' + getMatchId(m);
+    if (!localStorage.getItem(groupCompleteNotifSentKey)) {
+      localStorage.setItem(groupCompleteNotifSentKey, '1');
+      window._groupCompleteNotifSent = true;
+      // Écrire dans Firebase le flag + la liste du groupe pour que le bot envoie les notifs
+      var champs10 = combinedGroup10.filter(function(p){ return p.role === 'joueur'; });
+      var goals10  = combinedGroup10.filter(function(p){ return p.role === 'gardien'; });
+      var groupList = champs10.map(function(p){ return formatName(p.prenom, p.nom); }).join(', ')
+        + (goals10.length ? ' · Gardiens: ' + goals10.map(function(p){ return formatName(p.prenom, p.nom); }).join(', ') : '');
+      // IDs retenus et non retenus (dispo si besoin mais pas dans le groupe)
+      var retainedIds = combinedGroup10.map(function(p){ return p.id; });
+      var notRetainedIds = sbVoters.slice(fillers.length).map(function(p){ return p.id; });
+      db.ref('matches/' + getMatchId(m) + '/groupComplete').set({
+        at: firebase.database.ServerValue.TIMESTAMP,
+        retained: retainedIds,
+        notRetained: notRetainedIds,
+        groupList: groupList
+      });
+    }
+  }
+
   var isLightTheme = document.body.classList.contains('theme-light');
   var groupNameColor = isLightTheme ? '#15803d' : '#4ade80'; // vert du mot PRESENT du bouton de vote
 
