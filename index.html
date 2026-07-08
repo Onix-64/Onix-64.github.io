@@ -369,6 +369,89 @@
     <div id="results-list"></div>
   </div>
 
+  <div class="screen" id="screen-equipes">
+    <div class="sec-head">
+      <div class="sec-title">Équipes</div>
+      <div class="sec-sub">Générez des équipes équilibrées</div>
+    </div>
+
+    <!-- NIVEAUX JOUEURS -->
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0;">
+        <div class="card-lbl" style="margin:0;">Niveaux des joueurs</div>
+        <button onclick="toggleEquipesRoster()" style="background:none;border:none;color:var(--gold);font-size:12px;font-weight:700;cursor:pointer;letter-spacing:0.5px;" id="eq-roster-toggle-btn">MODIFIER</button>
+      </div>
+      <div id="eq-roster-body" style="display:none;padding:0 0 10px;">
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;" id="eq-roster-table">
+            <thead>
+              <tr style="border-bottom:0.5px solid var(--border);">
+                <th style="text-align:left;padding:8px 16px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Joueur</th>
+                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Marque</th>
+                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Défend</th>
+                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Endur.</th>
+                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Vivac.</th>
+                <th style="padding:8px 4px;color:var(--gold);font-weight:700;font-size:10px;text-transform:uppercase;">Note</th>
+              </tr>
+            </thead>
+            <tbody id="eq-roster-tbody"></tbody>
+          </table>
+        </div>
+        <div style="padding:10px 16px;border-top:0.5px solid var(--border);margin-top:4px;" id="eq-gk-levels"></div>
+        <div style="padding:10px 16px;text-align:right;">
+          <button onclick="saveEquipesRoster()" style="background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;" id="eq-save-roster-btn">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SÉLECTION PRÉSENTS -->
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;">
+        <div class="card-lbl" style="margin:0;">Présents ce soir</div>
+        <span id="eq-field-count" style="font-size:12px;color:var(--text3);font-weight:700;">0/8</span>
+      </div>
+      <div id="eq-field-list" style="padding:0;"></div>
+      <div style="padding:10px 16px 6px;" id="eq-gk-picks"></div>
+      <div id="eq-select-warn" style="padding:4px 16px 12px;font-size:12px;color:var(--red);"></div>
+    </div>
+
+    <!-- BOUTON GÉNÉRER -->
+    <button onclick="genEquipes()" id="eq-generate-btn" disabled style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:14px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:14px;opacity:0.5;">⚽ Générer les équipes</button>
+
+    <!-- RÉSULTAT -->
+    <div id="eq-result-wrap" style="display:none;margin-bottom:14px;">
+      <div style="display:flex;gap:10px;margin-bottom:10px;">
+        <!-- Équipe Verte -->
+        <div style="flex:1;background:#0d2018;border:0.5px solid #1a9e5c;border-radius:var(--r-md);padding:14px;">
+          <div style="font-size:11px;font-weight:800;color:#4ade80;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:6px;">Équipe Verte</div>
+          <input type="number" min="0" id="eq-score-a" placeholder="0" style="display:block;width:56px;margin:0 auto 10px;text-align:center;font-size:28px;font-weight:900;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px 0;color:#4ade80;font-family:inherit;" />
+          <div id="eq-team-a" style="display:flex;flex-direction:column;gap:3px;"></div>
+        </div>
+        <!-- Équipe Terracotta -->
+        <div style="flex:1;background:#2a0d0d;border:0.5px solid var(--red);border-radius:var(--r-md);padding:14px;">
+          <div style="font-size:11px;font-weight:800;color:#f87171;text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:6px;">Équipe Terracotta</div>
+          <input type="number" min="0" id="eq-score-b" placeholder="0" style="display:block;width:56px;margin:0 auto 10px;text-align:center;font-size:28px;font-weight:900;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px 0;color:#f87171;font-family:inherit;" />
+          <div id="eq-team-b" style="display:flex;flex-direction:column;gap:3px;"></div>
+        </div>
+      </div>
+      <div id="eq-balance-note" style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:10px;"></div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="regenEquipes()" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:12px;font-size:13px;font-weight:700;cursor:pointer;">🔄 Régénérer</button>
+        <button onclick="validerEquipes()" style="flex:2;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:12px;font-size:13px;font-weight:800;cursor:pointer;">✓ Valider ce match</button>
+      </div>
+      <div id="eq-confirm-msg" style="display:none;text-align:center;font-size:12px;color:var(--green);margin-top:8px;font-weight:700;">✓ Match enregistré !</div>
+    </div>
+
+    <!-- HISTORIQUE -->
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;">
+        <div class="card-lbl" style="margin:0;">Historique des matchs</div>
+        <button onclick="clearEquipesHistory()" style="background:none;border:none;color:var(--red);font-size:12px;font-weight:700;cursor:pointer;">Tout effacer</button>
+      </div>
+      <div id="eq-history-list" style="padding:0 0 4px;"></div>
+    </div>
+  </div>
+
   <div class="screen" id="screen-notifs">
     <div class="sec-head"><div class="sec-title">Paramètres</div></div>
 
@@ -478,6 +561,7 @@
   <button class="nav-btn" onclick="showScreen('planning',this)"><span class="nav-icon">📅</span>Planning<div class="nav-ind"></div></button>
   <button class="nav-btn" onclick="showScreen('players',this)"><span class="nav-icon">👥</span>Effectif<div class="nav-ind"></div></button>
   <button class="nav-btn" id="nav-results" style="display:none" onclick="showScreen('results',this)"><span class="nav-icon">🏆</span>Résultats<div class="nav-ind"></div></button>
+  <button class="nav-btn" id="nav-equipes" style="display:none" onclick="showScreen('equipes',this)"><span class="nav-icon">⚽</span>Équipes<div class="nav-ind"></div></button>
   <button class="nav-btn" onclick="showScreen('notifs',this)"><span class="nav-icon">⚙️</span>Réglages<div class="nav-ind"></div></button>
 </nav>
 
@@ -2081,6 +2165,321 @@ function saveBio() {
   }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
 }
 
+// ══ GÉNÉRATEUR D'ÉQUIPES ══
+var eqRoster = null; // {field: [...], keepers: [...]}
+var eqHistory = [];
+var eqSelectedField = new Set();
+var eqSelectedKeepers = new Set();
+var eqResults = [];
+var eqResultIndex = 0;
+
+function eqNote(p){ return (p.marque||0)+(p.defend||0)+(p.endur||0)+(p.vivac||0); }
+
+function initEqRosterFromPlayers() {
+  var fields = PLAYERS.filter(function(p){ return p.role==='joueur'; }).map(function(p){
+    return { id: String(p.id), name: formatName(p.prenom, p.nom), marque:3, defend:3, endur:3, vivac:3 };
+  });
+  var keepers = PLAYERS.filter(function(p){ return p.role==='gardien'; }).map(function(p){
+    return { id: String(p.id), name: formatName(p.prenom, p.nom), niveau:3 };
+  });
+  return { field: fields, keepers: keepers };
+}
+
+function loadEquipesData() {
+  db.ref('equipesRoster').once('value').then(function(snap){
+    var saved = snap.val();
+    if (saved) {
+      eqRoster = saved;
+    } else {
+      eqRoster = initEqRosterFromPlayers();
+    }
+    db.ref('equipesHistory').once('value').then(function(hsnap){
+      eqHistory = hsnap.val() ? Object.values(hsnap.val()) : [];
+      renderEquipesRoster();
+      renderEqFieldList();
+      renderEqGkPicks();
+      updateEqGenerateState();
+      renderEqHistory();
+    });
+  });
+}
+
+function toggleEquipesRoster() {
+  var body = document.getElementById('eq-roster-body');
+  var btn = document.getElementById('eq-roster-toggle-btn');
+  if (body.style.display === 'none') { body.style.display = 'block'; btn.textContent = 'FERMER'; }
+  else { body.style.display = 'none'; btn.textContent = 'MODIFIER'; }
+}
+
+function renderEquipesRoster() {
+  if (!eqRoster) return;
+  var tbody = document.getElementById('eq-roster-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = eqRoster.field.map(function(p){
+    return '<tr data-eq-id="'+p.id+'">'
+      + '<td style="padding:5px 16px;font-size:12px;font-weight:600;white-space:nowrap;">'+p.name+'</td>'
+      + ['marque','defend','endur','vivac'].map(function(stat){
+          return '<td style="padding:5px 4px;text-align:center;"><input type="number" min="0" max="5" step="1" data-stat="'+stat+'" value="'+p[stat]+'" style="width:40px;text-align:center;background:var(--bg);border:0.5px solid var(--border2);border-radius:4px;padding:3px;color:var(--text);font-size:12px;"></td>';
+        }).join('')
+      + '<td style="padding:5px 4px;text-align:center;font-weight:800;color:var(--gold);font-size:12px;">'+eqNote(p)+'</td>'
+      + '</tr>';
+  }).join('');
+  var gkDiv = document.getElementById('eq-gk-levels');
+  if (gkDiv) {
+    gkDiv.innerHTML = eqRoster.keepers.map(function(k){
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:0.5px solid var(--border);">'
+        + '<span style="font-size:13px;font-weight:600;">'+k.name+' (gardien)</span>'
+        + '<input type="number" min="0" max="5" step="0.5" id="eq-gk-'+k.id+'" value="'+k.niveau+'" style="width:50px;text-align:center;background:var(--bg);border:0.5px solid var(--border2);border-radius:4px;padding:4px;color:var(--text);font-size:12px;">'
+        + '</div>';
+    }).join('');
+  }
+}
+
+function saveEquipesRoster() {
+  if (!eqRoster) return;
+  document.querySelectorAll('#eq-roster-tbody tr').forEach(function(tr){
+    var id = tr.getAttribute('data-eq-id');
+    var p = eqRoster.field.find(function(x){ return x.id===id; });
+    if (!p) return;
+    tr.querySelectorAll('input[data-stat]').forEach(function(inp){
+      p[inp.getAttribute('data-stat')] = parseFloat(inp.value)||0;
+    });
+  });
+  eqRoster.keepers.forEach(function(k){
+    var inp = document.getElementById('eq-gk-'+k.id);
+    if (inp) k.niveau = parseFloat(inp.value)||0;
+  });
+  db.ref('equipesRoster').set(eqRoster).then(function(){
+    renderEquipesRoster();
+    renderEqFieldList();
+    var btn = document.getElementById('eq-save-roster-btn');
+    if (btn) { btn.textContent = '✓ Enregistré'; setTimeout(function(){ btn.textContent = 'Enregistrer'; }, 1500); }
+  });
+}
+
+function renderEqFieldList() {
+  if (!eqRoster) return;
+  var wrap = document.getElementById('eq-field-list');
+  if (!wrap) return;
+  wrap.innerHTML = eqRoster.field.map(function(p){
+    var checked = eqSelectedField.has(p.id);
+    var disabled = !checked && eqSelectedField.size >= 8;
+    return '<div class="fiche-field" data-eq-pid="'+p.id+'" onclick="eqToggleField(\''+p.id+'\')" '
+      + 'style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);cursor:'+(disabled?'not-allowed':'pointer')+';opacity:'+(disabled?0.4:1)+';">'
+      + '<div style="width:18px;height:18px;border:1.5px solid '+(checked?'var(--green)':'var(--border2)')+';border-radius:4px;background:'+(checked?'var(--green)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+      + (checked?'<span style="color:#fff;font-size:11px;font-weight:700;">✓</span>':'')+'</div>'
+      + '<div style="flex:1;font-size:13px;font-weight:600;">'+p.name+'</div>'
+      + '<div style="font-size:11px;color:var(--text3);font-weight:700;">'+eqNote(p)+'</div>'
+      + '</div>';
+  }).join('');
+  var cnt = document.getElementById('eq-field-count');
+  if (cnt) cnt.textContent = eqSelectedField.size+'/8';
+}
+
+function eqToggleField(id) {
+  if (eqSelectedField.has(id)) eqSelectedField.delete(id);
+  else if (eqSelectedField.size < 8) eqSelectedField.add(id);
+  renderEqFieldList();
+  updateEqGenerateState();
+}
+
+function renderEqGkPicks() {
+  if (!eqRoster) return;
+  var wrap = document.getElementById('eq-gk-picks');
+  if (!wrap) return;
+  wrap.innerHTML = '<div style="font-size:11px;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Gardiens</div>'
+    + '<div style="display:flex;gap:8px;">'
+    + eqRoster.keepers.map(function(k){
+        var checked = eqSelectedKeepers.has(k.id);
+        return '<div onclick="eqToggleGk(\''+k.id+'\')" style="flex:1;text-align:center;padding:10px;border:1.5px solid '+(checked?'var(--gold)':'var(--border2)')+';border-radius:var(--r-md);cursor:pointer;font-size:13px;font-weight:700;background:'+(checked?'var(--gold-bg)':'transparent')+';color:'+(checked?'var(--gold)':'var(--text2)')+';">'+k.name+'</div>';
+      }).join('')
+    + '</div>';
+}
+
+function eqToggleGk(id) {
+  if (eqSelectedKeepers.has(id)) eqSelectedKeepers.delete(id);
+  else eqSelectedKeepers.add(id);
+  renderEqGkPicks();
+  updateEqGenerateState();
+}
+
+function updateEqGenerateState() {
+  var btn = document.getElementById('eq-generate-btn');
+  var warn = document.getElementById('eq-select-warn');
+  if (!btn) return;
+  var ok = eqSelectedField.size === 8 && eqSelectedKeepers.size >= 1;
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '0.5';
+  if (warn) {
+    if (ok) { warn.textContent = eqSelectedKeepers.size===1 ? '⚠️ Un seul gardien : une équipe jouera sans gardien dédié.' : ''; }
+    else {
+      var missing = [];
+      if (eqSelectedField.size < 8) missing.push((8-eqSelectedField.size)+' joueur(s) de champ');
+      if (eqSelectedKeepers.size < 1) missing.push('au moins 1 gardien');
+      warn.textContent = 'Sélectionnez encore : ' + missing.join(' et ');
+    }
+  }
+}
+
+function eqCombinationsK(arr, k) {
+  var res = [];
+  (function rec(start, combo){
+    if (combo.length===k){ res.push(combo.slice()); return; }
+    for (var i=start;i<arr.length;i++){ combo.push(arr[i]); rec(i+1,combo); combo.pop(); }
+  })(0,[]);
+  return res;
+}
+
+function eqStatSums(players) {
+  return players.reduce(function(acc,p){
+    acc.marque+=p.marque; acc.defend+=p.defend; acc.endur+=p.endur; acc.vivac+=p.vivac; acc.note+=eqNote(p); return acc;
+  }, {marque:0,defend:0,endur:0,vivac:0,note:0});
+}
+
+function buildEqCoOccurrence() {
+  var pair={}, gk={};
+  var n=eqHistory.length;
+  eqHistory.forEach(function(m,idx){
+    var weight = Math.pow(0.6, n-1-idx);
+    [m.teamA, m.teamB].forEach(function(team){
+      var pl=team.players;
+      for(var i=0;i<pl.length;i++){
+        for(var j=i+1;j<pl.length;j++){
+          var key=[pl[i],pl[j]].sort().join('|');
+          pair[key]=(pair[key]||0)+weight;
+        }
+        if(team.keeper){ var gkey=pl[i]+'|'+team.keeper; gk[gkey]=(gk[gkey]||0)+weight; }
+      }
+    });
+  });
+  return {pair:pair,gk:gk};
+}
+
+function generateEqCandidates() {
+  var fieldPlayers = eqRoster.field.filter(function(p){ return eqSelectedField.has(p.id); });
+  var keepers = eqRoster.keepers.filter(function(k){ return eqSelectedKeepers.has(k.id); });
+  var coOcc = buildEqCoOccurrence();
+  var idxAll = fieldPlayers.map(function(_,i){ return i; });
+  var subsets = eqCombinationsK(idxAll, 4);
+  var candidates = [];
+
+  function repeatCost(ids){ var c=0; for(var i=0;i<ids.length;i++) for(var j=i+1;j<ids.length;j++){ var k=[ids[i],ids[j]].sort().join('|'); c+=coOcc.pair[k]||0; } return c; }
+  function gkCost(ids,kid){ if(!kid) return 0; var c=0; ids.forEach(function(id){ c+=coOcc.gk[id+'|'+kid]||0; }); return c; }
+
+  function evalCfg(tA,tB,kA,kB){
+    var sA=eqStatSums(tA), sB=eqStatSums(tB);
+    var sc=Math.abs(sA.marque-sB.marque)+Math.abs(sA.defend-sB.defend)+Math.abs(sA.endur-sB.endur)+Math.abs(sA.vivac-sB.vivac);
+    var nc=Math.abs(sA.note-sB.note)*0.5;
+    var kc=kA&&kB?Math.abs(kA.niveau-kB.niveau):2;
+    var idsA=tA.map(function(p){return p.id;}), idsB=tB.map(function(p){return p.id;});
+    var rc=(repeatCost(idsA)+repeatCost(idsB))*3;
+    var gc=(gkCost(idsA,kA?kA.id:null)+gkCost(idsB,kB?kB.id:null))*2;
+    return {teamA:tA,teamB:tB,kA:kA,kB:kB,cost:sc+nc+kc+rc+gc};
+  }
+
+  subsets.forEach(function(subIdx){
+    var tA=subIdx.map(function(i){return fieldPlayers[i];});
+    var tB=fieldPlayers.filter(function(_,i){return subIdx.indexOf(i)===-1;});
+    if(keepers.length===2){ candidates.push(evalCfg(tA,tB,keepers[0],keepers[1])); candidates.push(evalCfg(tA,tB,keepers[1],keepers[0])); }
+    else if(keepers.length===1){ candidates.push(evalCfg(tA,tB,keepers[0],null)); candidates.push(evalCfg(tA,tB,null,keepers[0])); }
+    else { candidates.push(evalCfg(tA,tB,null,null)); }
+  });
+  candidates.sort(function(a,b){return a.cost-b.cost;});
+  return candidates;
+}
+
+function renderEqResult(cfg) {
+  var wrap = document.getElementById('eq-result-wrap');
+  if (!wrap) return;
+  wrap.style.display = 'block';
+  document.getElementById('eq-confirm-msg').style.display = 'none';
+
+  function teamBlock(containerId, players, keeper, scoreColor) {
+    var el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = (keeper ? '<div style="font-size:11px;color:'+scoreColor+';margin-bottom:6px;font-weight:700;">🥅 '+keeper.name+'</div>' : '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;">Sans gardien dédié</div>')
+      + players.map(function(p){
+          return '<div style="font-size:12px;padding:3px 0;border-bottom:0.5px solid rgba(255,255,255,0.08);">'+p.name+'</div>';
+        }).join('')
+      + '<div style="font-size:10px;color:var(--text3);margin-top:6px;">Note: '+eqStatSums(players).note+'</div>';
+  }
+
+  teamBlock('eq-team-a', cfg.teamA, cfg.kA, '#4ade80');
+  teamBlock('eq-team-b', cfg.teamB, cfg.kB, '#f87171');
+  var bn = document.getElementById('eq-balance-note');
+  if (bn) bn.textContent = 'Équilibre estimé : '+cfg.cost.toFixed(1)+' pt(s) — plus c\'est bas, plus c\'est serré.';
+  document.getElementById('eq-score-a').value = '';
+  document.getElementById('eq-score-b').value = '';
+}
+
+function genEquipes() {
+  eqResults = generateEqCandidates();
+  eqResultIndex = 0;
+  if (eqResults.length) renderEqResult(eqResults[0]);
+}
+
+function regenEquipes() {
+  if (!eqResults.length) return;
+  eqResultIndex = (eqResultIndex+1) % Math.min(eqResults.length, 10);
+  renderEqResult(eqResults[eqResultIndex]);
+}
+
+function validerEquipes() {
+  if (!eqResults.length) return;
+  var cfg = eqResults[eqResultIndex];
+  var scoreA = document.getElementById('eq-score-a').value;
+  var scoreB = document.getElementById('eq-score-b').value;
+  var entry = {
+    date: new Date().toISOString(),
+    teamA: { players: cfg.teamA.map(function(p){return p.id;}), keeper: cfg.kA?cfg.kA.id:null },
+    teamB: { players: cfg.teamB.map(function(p){return p.id;}), keeper: cfg.kB?cfg.kB.id:null },
+    scoreA: scoreA !== '' ? parseInt(scoreA) : null,
+    scoreB: scoreB !== '' ? parseInt(scoreB) : null
+  };
+  eqHistory.push(entry);
+  var key = 'match_' + Date.now();
+  db.ref('equipesHistory/'+key).set(entry).then(function(){
+    renderEqHistory();
+    document.getElementById('eq-confirm-msg').style.display = 'block';
+  });
+}
+
+function renderEqHistory() {
+  var list = document.getElementById('eq-history-list');
+  if (!list || !eqRoster) return;
+  if (!eqHistory.length) {
+    list.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:var(--text3);font-style:italic;">Aucun match enregistré.</div>';
+    return;
+  }
+  function nameOf(id) {
+    var f = eqRoster.field.find(function(p){return p.id===id;});
+    if (f) return f.name;
+    var k = eqRoster.keepers.find(function(k){return k.id===id;});
+    return k ? k.name : id;
+  }
+  list.innerHTML = eqHistory.slice().reverse().map(function(m, i){
+    var d = new Date(m.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
+    var aNames = m.teamA.players.map(nameOf).join(', ')+(m.teamA.keeper?' + '+nameOf(m.teamA.keeper)+' (G)':'');
+    var bNames = m.teamB.players.map(nameOf).join(', ')+(m.teamB.keeper?' + '+nameOf(m.teamB.keeper)+' (G)':'');
+    var score = (m.scoreA !== null && m.scoreB !== null) ? ' <span style="color:var(--gold);font-weight:800;">'+m.scoreA+'-'+m.scoreB+'</span>' : '';
+    return '<div style="padding:10px 16px;border-bottom:0.5px solid var(--border);font-size:12px;display:flex;align-items:center;gap:8px;">'
+      + '<span style="color:var(--text3);flex-shrink:0;">'+d+'</span>'
+      + '<span style="flex:1;color:var(--text2);"><span style="color:#4ade80;font-weight:700;">'+aNames+'</span> vs <span style="color:#f87171;font-weight:700;">'+bNames+'</span>'+score+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+function clearEquipesHistory() {
+  if (!eqHistory.length) return;
+  if (!confirm('Effacer tout l\'historique des matchs ?')) return;
+  eqHistory = [];
+  db.ref('equipesHistory').remove().then(function(){ renderEqHistory(); });
+}
+
+function showEquipesScreen() {
+  if (!eqRoster) loadEquipesData();
+}
+
 function adminToggleNotifPause() {
   if (!currentUser || !currentUser.isAdmin) return;
   db.ref('settings/notificationsPaused').once('value').then(function(snap) {
@@ -2179,6 +2578,7 @@ function showScreen(name, btn) {
   if (name==='planning') renderPlanning();
   if (name==='players')  renderPlayers();
   if (name==='results')  renderResultsList();
+  if (name==='equipes')  showEquipesScreen();
   if (name==='notifs')   renderNotifs();
 }
 function closeOv(id) { document.getElementById(id).classList.remove('open'); }
@@ -2225,6 +2625,8 @@ function loginUser(user) {
   badge.textContent = (user.isAdmin && user.id === 0) ? 'ADMIN' : user.isVisitor ? '👁 Visiteur' : formatName(user.prenom, user.nom);
   var navResults = document.getElementById('nav-results');
   if (navResults) navResults.style.display = user.isAdmin ? 'flex' : 'none';
+  var navEquipes = document.getElementById('nav-equipes');
+  if (navEquipes) navEquipes.style.display = (user.isAdmin || user.id === 1) ? 'flex' : 'none';
   var navSettings = document.getElementById('nav-settings');
   if (navSettings) navSettings.style.display = 'flex';
   listenVotes(getMatchId(getNextMatch()));
