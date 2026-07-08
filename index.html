@@ -897,34 +897,66 @@ function renderHome() {
   document.getElementById('banner-date').textContent = ds.charAt(0).toUpperCase()+ds.slice(1);
 
   // ── Détermination du groupe des 10 ──
-  // 1) Les joueurs ayant voté PRESENT
-  // 2) Si besoin, on complète avec les joueurs DISPO SI BESOIN ayant répondu le plus tôt
-  var presentVoters = all.filter(function(p){ return votes[p.id] === 'present'; });
-  var sbVoters = all.filter(function(p){ return votes[p.id] === 'sb'; }).sort(function(a, b) {
+  // Séparation gardiens / joueurs de champ
+  var allGoals  = all.filter(function(p){ return p.role === 'gardien'; });
+  var allFields = all.filter(function(p){ return p.role === 'joueur'; });
+
+  // Gardiens : présents ou dispo si besoin par ordre chronologique
+  var presentGoals = allGoals.filter(function(p){ return votes[p.id] === 'present'; });
+  var sbGoals      = allGoals.filter(function(p){ return votes[p.id] === 'sb'; }).sort(function(a,b){
     var ta = voteTimestamps[a.id] ? voteTimestamps[a.id].getTime() : Infinity;
     var tb = voteTimestamps[b.id] ? voteTimestamps[b.id].getTime() : Infinity;
     return ta - tb;
   });
-  var needed = Math.max(0, 10 - presentVoters.length);
-  var fillers = sbVoters.slice(0, needed);
-  var groupComplete = (presentVoters.length + sbVoters.length) >= 10;
+  var pdGoals = allGoals.filter(function(p){ return votes[p.id] === 'pd'; });
+
+  // Nombre de gardiens validés (présents + si besoin jusqu'à 2)
+  var neededGoals    = 2;
+  var retainedGoals  = presentGoals.concat(sbGoals).slice(0, neededGoals);
+  var missingGoals   = neededGoals - retainedGoals.length; // gardiens manquants à compenser par des joueurs de champ
+  var allGoalsVoted  = (presentGoals.length + sbGoals.length + pdGoals.length) === allGoals.length;
+
+  // Joueurs de champ : présents ou dispo si besoin par ordre chronologique
+  var presentFields = allFields.filter(function(p){ return votes[p.id] === 'present'; });
+  var sbFields      = allFields.filter(function(p){ return votes[p.id] === 'sb'; }).sort(function(a,b){
+    var ta = voteTimestamps[a.id] ? voteTimestamps[a.id].getTime() : Infinity;
+    var tb = voteTimestamps[b.id] ? voteTimestamps[b.id].getTime() : Infinity;
+    return ta - tb;
+  });
+
+  // On a besoin de 8 joueurs de champ + les gardiens manquants compensés par des joueurs
+  var neededFields   = 8 + missingGoals;
+  var fillerFields   = sbFields.slice(0, Math.max(0, neededFields - presentFields.length));
+  var retainedFields = presentFields.concat(fillerFields).slice(0, neededFields);
+
+  // Le groupe est complet quand :
+  // - Tous les gardiens ont voté (présent, pd ou sb)
+  // - On a les 8 joueurs de champ + compensation gardiens manquants
+  var fieldsDone = (presentFields.length + sbFields.filter(function(p){ return !fillerFields.includes(p); }).length + allFields.filter(function(p){ return votes[p.id] === 'pd'; }).length) === allFields.length || retainedFields.length >= neededFields;
+  var groupComplete = allGoalsVoted && retainedFields.length >= neededFields && retainedGoals.length + retainedFields.length >= 10;
+
+  // Groupe combiné final
+  var combinedGroup = retainedGoals.concat(retainedFields);
+  var notRetainedSb = sbFields.filter(function(p){ return !retainedFields.includes(p); })
+                       .concat(sbGoals.filter(function(p){ return !retainedGoals.includes(p); }));
+
+  // Compatibilité avec l'ancien code (presentVoters pour les barres de vote)
+  var presentVoters = presentGoals.concat(presentFields);
+  var sbVoters = sbGoals.concat(sbFields);
+  var fillers = fillerFields.concat(sbGoals.slice(0, Math.max(0, neededGoals - presentGoals.length)));
 
   // ── Notification "groupe complet" ──
-  // On envoie UNE SEULE FOIS quand le groupe vient d'atteindre 10
   if (groupComplete && matchNotifiedAt && !window._groupCompleteNotifSent) {
-    var combinedGroup10 = presentVoters.concat(fillers);
     var groupCompleteNotifSentKey = 'groupCompleteNotif_' + getMatchId(m);
     if (!localStorage.getItem(groupCompleteNotifSentKey)) {
       localStorage.setItem(groupCompleteNotifSentKey, '1');
       window._groupCompleteNotifSent = true;
-      // Écrire dans Firebase le flag + la liste du groupe pour que le bot envoie les notifs
-      var champs10 = combinedGroup10.filter(function(p){ return p.role === 'joueur'; });
-      var goals10  = combinedGroup10.filter(function(p){ return p.role === 'gardien'; });
+      var champs10 = retainedFields;
+      var goals10  = retainedGoals;
       var groupList = champs10.map(function(p){ return formatName(p.prenom, p.nom); }).join(', ')
         + (goals10.length ? ' · Gardiens: ' + goals10.map(function(p){ return formatName(p.prenom, p.nom); }).join(', ') : '');
-      // IDs retenus et non retenus (dispo si besoin mais pas dans le groupe)
-      var retainedIds = combinedGroup10.map(function(p){ return p.id; });
-      var notRetainedIds = sbVoters.slice(fillers.length).map(function(p){ return p.id; });
+      var retainedIds   = combinedGroup.map(function(p){ return p.id; });
+      var notRetainedIds = notRetainedSb.map(function(p){ return p.id; });
       db.ref('matches/' + getMatchId(m) + '/groupComplete').set({
         at: firebase.database.ServerValue.TIMESTAMP,
         retained: retainedIds,
@@ -938,9 +970,8 @@ function renderHome() {
   var groupNameColor = isLightTheme ? '#15803d' : '#4ade80'; // vert du mot PRESENT du bouton de vote
 
   if (groupComplete) {
-    var combinedGroup = presentVoters.concat(fillers);
-    var champs = combinedGroup.filter(function(p){ return p.role === 'joueur'; });
-    var goals  = combinedGroup.filter(function(p){ return p.role === 'gardien'; });
+    var champs = retainedFields;
+    var goals  = retainedGoals;
     var cardBg     = isLightTheme ? 'var(--bg3)'    : '#0d2018';
     var cardBorder = isLightTheme ? 'var(--border2)' : '#1a9e5c';
     var champsHTML = champs.map(function(p){ return '<div>'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
