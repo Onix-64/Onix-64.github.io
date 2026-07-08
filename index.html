@@ -970,16 +970,22 @@ function renderHome() {
   var groupNameColor = isLightTheme ? '#15803d' : '#4ade80'; // vert du mot PRESENT du bouton de vote
 
   if (groupComplete) {
-    var champs = retainedFields;
+    var champs = retainedFields.slice(0, 8);
     var goals  = retainedGoals;
     var cardBg     = isLightTheme ? 'var(--bg3)'    : '#0d2018';
     var cardBorder = isLightTheme ? 'var(--border2)' : '#1a9e5c';
     var champsHTML = champs.map(function(p){ return '<div>'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
 
-    // Joueurs disponibles qui compenseraient les gardiens manquants
-    // = ceux présents ou sb qui ne font PAS partie des 8 retenus
-    var retained8Ids = retainedFields.map(function(p){ return p.id; }); // déjà limité à 8
-    var allAvailableFields = presentFields.concat(sbFields).filter(function(p){
+    // Compensateurs = dispo hors des 8 retenus affichés
+    var retained8Ids = champs.map(function(p){ return p.id; });
+    var allFieldsDispo = all.filter(function(p){
+      return p.role === 'joueur' && (votes[p.id] === 'present' || votes[p.id] === 'sb');
+    }).sort(function(a, b){
+      var ta = voteTimestamps[a.id] ? voteTimestamps[a.id].getTime() : Infinity;
+      var tb = voteTimestamps[b.id] ? voteTimestamps[b.id].getTime() : Infinity;
+      return ta - tb;
+    });
+    var allAvailableFields = allFieldsDispo.filter(function(p){
       return retained8Ids.indexOf(p.id) === -1;
     }).slice(0, missingGoals);
 
