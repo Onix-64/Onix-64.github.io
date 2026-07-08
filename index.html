@@ -2315,6 +2315,19 @@ if (initTheme === 'light') {
 function hideSplash() {
   var splash = document.getElementById('splash');
   if (!splash) return;
+
+  // ── Mode test : ?test=N connecte directement le joueur N ──
+  var urlParams = new URLSearchParams(window.location.search);
+  var testId = urlParams.get('test');
+  if (testId !== null) {
+    var testUser = PIN_PLAYERS.find(function(p){ return p.id === parseInt(testId, 10); });
+    if (testUser) {
+      splash.style.display = 'none';
+      loginUser(testUser);
+      return;
+    }
+  }
+
   splash.style.opacity = '0';
   splash.style.transition = 'opacity 0.6s';
   setTimeout(function() {
