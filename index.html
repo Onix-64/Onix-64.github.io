@@ -2224,7 +2224,7 @@ function updateMyVoteUI(choice) {
 }
 
 function refreshMyVote() {
-  if (!currentUser || currentUser.isAdmin) {
+  if (!currentUser || (currentUser.isAdmin && currentUser.id === 0) || currentUser.isVisitor) {
     var card = document.getElementById('vote-card');
     if (card) card.style.display = 'none';
     return;
