@@ -1888,6 +1888,19 @@ function adminResetVotes() {
   var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   if (!confirm('Réinitialiser tous les votes pour le match du ' + dateLabel + ' ? Cette action est irréversible.')) return;
   db.ref('matches/' + getMatchId(m0) + '/votes').remove().then(function() {
+    // Vider les votes en mémoire
+    votes = {};
+    voteTimestamps = {};
+    // Supprimer aussi le flag groupComplete et groupCompleteNotifSent
+    db.ref('matches/' + getMatchId(m0) + '/groupComplete').remove();
+    db.ref('matches/' + getMatchId(m0) + '/groupCompleteNotifSent').remove();
+    // Réinitialiser le flag local pour permettre de renvoyer la notif groupe complet
+    window._groupCompleteNotifSent = false;
+    var matchKey = 'groupCompleteNotif_' + getMatchId(m0);
+    localStorage.removeItem(matchKey);
+    // Rafraîchir l'affichage
+    renderHome();
+    refreshMyVote();
     alert('Votes réinitialisés pour le ' + dateLabel + '.');
   }).catch(function(err) {
     alert('Erreur : ' + (err && err.message || err));
