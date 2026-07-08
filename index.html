@@ -925,7 +925,7 @@ function renderHome() {
   });
 
   // On a besoin de 8 joueurs de champ + les gardiens manquants compensés par des joueurs
-  var neededFields   = 8 + missingGoals;
+  var neededFields   = 8;
   var fillerFields   = sbFields.slice(0, Math.max(0, neededFields - presentFields.length));
   var retainedFields = presentFields.concat(fillerFields).slice(0, neededFields);
 
@@ -976,9 +976,11 @@ function renderHome() {
     var cardBorder = isLightTheme ? 'var(--border2)' : '#1a9e5c';
     var champsHTML = champs.map(function(p){ return '<div>'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
 
-    // Joueurs disponibles qui compenseraient les gardiens manquants (dans l'ordre chronologique)
+    // Joueurs disponibles qui compenseraient les gardiens manquants
+    // = ceux présents ou sb qui ne font PAS partie des 8 retenus
+    var retained8Ids = retainedFields.map(function(p){ return p.id; }); // déjà limité à 8
     var allAvailableFields = presentFields.concat(sbFields).filter(function(p){
-      return !retainedFields.slice(0, 8).some(function(r){ return r.id === p.id; });
+      return retained8Ids.indexOf(p.id) === -1;
     }).slice(0, missingGoals);
 
     var redStyle = 'color:var(--red);font-weight:800;font-size:13px;';
