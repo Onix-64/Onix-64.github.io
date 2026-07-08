@@ -932,8 +932,8 @@ function renderHome() {
   // Le groupe est complet quand :
   // - Tous les gardiens ont voté (présent, pd ou sb)
   // - On a les 8 joueurs de champ + compensation gardiens manquants
-  var fieldsDone = (presentFields.length + sbFields.filter(function(p){ return !fillerFields.includes(p); }).length + allFields.filter(function(p){ return votes[p.id] === 'pd'; }).length) === allFields.length || retainedFields.length >= neededFields;
-  var groupComplete = allGoalsVoted && retainedFields.length >= neededFields && retainedGoals.length + retainedFields.length >= 10;
+  // Le groupe est complet quand tous les gardiens ont voté ET qu'on a 8 joueurs de champ
+  var groupComplete = allGoalsVoted && retainedFields.length >= 8;
 
   // Groupe combiné final
   var combinedGroup = retainedGoals.concat(retainedFields);
@@ -976,16 +976,16 @@ function renderHome() {
     var cardBorder = isLightTheme ? 'var(--border2)' : '#1a9e5c';
     var champsHTML = champs.map(function(p){ return '<div>'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
 
-    // Joueurs disponibles non encore retenus (pour compenser les gardiens manquants)
+    // Joueurs disponibles qui compenseraient les gardiens manquants (dans l'ordre chronologique)
     var allAvailableFields = presentFields.concat(sbFields).filter(function(p){
-      return !retainedFields.some(function(r){ return r.id === p.id; });
-    });
+      return !retainedFields.slice(0, 8).some(function(r){ return r.id === p.id; });
+    }).slice(0, missingGoals);
 
     var redStyle = 'color:var(--red);font-weight:800;font-size:13px;';
     var subStyle = 'color:var(--text2);font-size:12px;font-style:italic;margin-top:3px;';
     var goalsHTML = '';
     if (goals.length === 2) {
-      goalsHTML = goals.map(function(p){ return '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';">'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
+      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';text-align:center;">' + goals.map(function(p){ return formatName(p.prenom, p.nom); }).join(' &middot; ') + '</div>';
     } else if (goals.length === 1) {
       var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+formatName(allAvailableFields[0].prenom, allAvailableFields[0].nom)+'</strong> fera le 10e' : '';
       goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';">'+formatName(goals[0].prenom, goals[0].nom)+'</div>'
