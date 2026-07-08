@@ -2178,7 +2178,7 @@ function loginUser(user) {
 
 // ══ VOTE JOUEUR ══
 function castVote(choice) {
-  if (!currentUser || currentUser.isAdmin || currentUser.isVisitor) return;
+  if (!currentUser || (currentUser.isAdmin && currentUser.id === 0) || currentUser.isVisitor) return;
   var pid = currentUser.id;
 
   // Vérifier que le choix est autorisé selon la situation du joueur
