@@ -2186,21 +2186,43 @@ function initEqRosterFromPlayers() {
 }
 
 function loadEquipesData() {
+  // Toujours initialiser depuis PLAYERS d'abord pour avoir la liste complète
+  var base = initEqRosterFromPlayers();
+
   db.ref('equipesRoster').once('value').then(function(snap){
     var saved = snap.val();
-    if (saved) {
+    if (saved && saved.field && saved.field.length) {
+      // Fusionner : garder les stats sauvegardées, ajouter les nouveaux joueurs manquants
+      base.field.forEach(function(bp){
+        var existing = saved.field.find(function(p){ return p.id === bp.id; });
+        if (!existing) saved.field.push(bp);
+      });
+      base.keepers.forEach(function(bk){
+        if (!saved.keepers) saved.keepers = [];
+        var existing = saved.keepers.find(function(k){ return k.id === bk.id; });
+        if (!existing) saved.keepers.push(bk);
+      });
       eqRoster = saved;
     } else {
-      eqRoster = initEqRosterFromPlayers();
+      eqRoster = base;
     }
     db.ref('equipesHistory').once('value').then(function(hsnap){
-      eqHistory = hsnap.val() ? Object.values(hsnap.val()) : [];
+      var hval = hsnap.val();
+      eqHistory = hval ? Object.values(hval) : [];
       renderEquipesRoster();
       renderEqFieldList();
       renderEqGkPicks();
       updateEqGenerateState();
       renderEqHistory();
     });
+  }).catch(function(){
+    eqRoster = base;
+    eqHistory = [];
+    renderEquipesRoster();
+    renderEqFieldList();
+    renderEqGkPicks();
+    updateEqGenerateState();
+    renderEqHistory();
   });
 }
 
@@ -2624,7 +2646,7 @@ function loginUser(user) {
   var badge = document.getElementById('user-badge');
   badge.textContent = (user.isAdmin && user.id === 0) ? 'ADMIN' : user.isVisitor ? '👁 Visiteur' : formatName(user.prenom, user.nom);
   var navResults = document.getElementById('nav-results');
-  if (navResults) navResults.style.display = user.isAdmin ? 'flex' : 'none';
+  if (navResults) navResults.style.display = (user.isAdmin && user.id !== 1) ? 'flex' : 'none';
   var navEquipes = document.getElementById('nav-equipes');
   if (navEquipes) navEquipes.style.display = (user.isAdmin || user.id === 1) ? 'flex' : 'none';
   var navSettings = document.getElementById('nav-settings');
