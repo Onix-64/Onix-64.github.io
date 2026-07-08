@@ -975,12 +975,35 @@ function renderHome() {
     var cardBg     = isLightTheme ? 'var(--bg3)'    : '#0d2018';
     var cardBorder = isLightTheme ? 'var(--border2)' : '#1a9e5c';
     var champsHTML = champs.map(function(p){ return '<div>'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
-    var goalsHTML  = goals.map(function(p){ return formatName(p.prenom, p.nom); }).join(' &middot; ');
+
+    // Joueurs disponibles non encore retenus (pour compenser les gardiens manquants)
+    var allAvailableFields = presentFields.concat(sbFields).filter(function(p){
+      return !retainedFields.some(function(r){ return r.id === p.id; });
+    });
+
+    var redStyle = 'color:var(--red);font-weight:800;font-size:13px;';
+    var subStyle = 'color:var(--text2);font-size:12px;font-style:italic;margin-top:3px;';
+    var goalsHTML = '';
+    if (goals.length === 2) {
+      goalsHTML = goals.map(function(p){ return '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';">'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
+    } else if (goals.length === 1) {
+      var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+formatName(allAvailableFields[0].prenom, allAvailableFields[0].nom)+'</strong> fera le 10e' : '';
+      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';">'+formatName(goals[0].prenom, goals[0].nom)+'</div>'
+        + '<div style="'+redStyle+'">Besoin d\'un gardien</div>'
+        + (comp1 ? '<div style="'+subStyle+'">'+comp1+'</div>' : '');
+    } else {
+      var c1 = allAvailableFields[0] ? formatName(allAvailableFields[0].prenom, allAvailableFields[0].nom) : '';
+      var c2 = allAvailableFields[1] ? formatName(allAvailableFields[1].prenom, allAvailableFields[1].nom) : '';
+      var comp2 = (c1 && c2) ? 'Sinon <strong>'+c1+'</strong> et <strong>'+c2+'</strong> complèteront le groupe' : (c1 ? 'Sinon <strong>'+c1+'</strong> complétera le groupe' : '');
+      goalsHTML = '<div style="'+redStyle+'">Besoin de 2 gardiens</div>'
+        + (comp2 ? '<div style="'+subStyle+'">'+comp2+'</div>' : '');
+    }
+
     document.getElementById('group-status').innerHTML =
       '<div style="width:100%;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:12px;padding:14px 16px;">'
         + '<div style="font-size:15px;font-weight:800;letter-spacing:0.5px;color:'+groupNameColor+';text-align:center;margin-bottom:10px;">&#10003; GROUPE COMPLET</div>'
-        + (champs.length ? '<div style="margin-bottom:'+(goals.length ? '8px' : '0') + ';"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Joueurs</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px;font-weight:700;color:'+groupNameColor+';line-height:1.6;">'+champsHTML+'</div></div>' : '')
-        + (goals.length ? '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Gardiens</div><div style="font-size:13px;font-weight:700;color:'+groupNameColor+';line-height:1.6;">'+goalsHTML+'</div></div>' : '')
+        + (champs.length ? '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Joueurs</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px;font-weight:700;color:'+groupNameColor+';line-height:1.6;">'+champsHTML+'</div></div>' : '')
+        + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Gardiens</div>'+goalsHTML+'</div>'
       + '</div>';
   } else if (C.wait === 0) {
     // Tout le monde a voté et on n'arrive toujours pas à 10 : situation
