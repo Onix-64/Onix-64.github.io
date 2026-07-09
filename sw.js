@@ -1,5 +1,5 @@
-const CACHE_NAME = 'foot-mardi-v43';
-const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png', '/pin-ball-dark-v2.png', '/pin-ball-light.png'];
+const CACHE_NAME = 'foot-mardi-v15';
+const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png'];
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -45,13 +45,38 @@ const messaging = firebase.messaging();
 // pour pouvoir y ajouter des boutons d'action adaptés à chaque joueur.
 messaging.onBackgroundMessage(payload => {
   const data = payload.data || {};
+
+  // ── Notification "Équipes du mardi" (tirage automatique) ──
+  // Présentation reprise de l'onglet Historique des matchs : deux colonnes
+  // West All Stars / East All Stars, avec le(s) gardien(s) à part.
+  if (data.type === 'teams') {
+    let west = [], east = [];
+    try { west = JSON.parse(data.west || '[]'); } catch (e) {}
+    try { east = JSON.parse(data.east || '[]'); } catch (e) {}
+    const westLines = ['🌟 WEST ALL STARS'].concat(west.map(n => '• ' + n));
+    if (data.westKeeper) westLines.push('🥅 ' + data.westKeeper);
+    const eastLines = ['🌟 EAST ALL STARS'].concat(east.map(n => '• ' + n));
+    if (data.eastKeeper) eastLines.push('🥅 ' + data.eastKeeper);
+    const body = westLines.join('\n') + '\n\n' + eastLines.join('\n');
+
+    self.registration.showNotification(data.title || 'Équipes du mardi', {
+      body: body,
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: data.matchId ? ('foot-mardi-teams-' + data.matchId) : undefined,
+      data: data
+    });
+    return;
+  }
+
+  const notif = payload.notification || {};
   const inPlanning = data.inPlanning === '1';
   const actions = inPlanning
     ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
     : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }];
 
-  self.registration.showNotification(data.title || 'Foot du mardi', {
-    body: data.body || '',
+  self.registration.showNotification(notif.title, {
+    body: notif.body,
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: data.matchId ? ('foot-mardi-' + data.matchId) : undefined,
