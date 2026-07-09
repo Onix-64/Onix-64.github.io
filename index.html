@@ -1207,6 +1207,7 @@ function renderPlanningGeneral() {
 
     var ds = m.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
     var dateCap = ds.charAt(0).toUpperCase()+ds.slice(1);
+    var dateHtml = dateCap + (m.test ? ' - <span style="color:var(--red);">Planning aléatoire pour test</span>' : '');
     var chips = m.players.map(function(p){return '<span class="mg-chip">'+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var gkChips = m.goalkeepers.map(function(p){return '<span class="mg-chip gk">🥅 '+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var isPast = m.date < new Date(new Date().setHours(18,0,0,0));
@@ -1214,7 +1215,7 @@ function renderPlanningGeneral() {
     var tsClass = i === nextIdx ? 'ts-next' : 'ts-plain';
     var cardClass = 'match-general' + (i === nextIdx ? ' mg-highlight' : '');
     return '<div class="'+cardClass+'" onclick="openMatch('+i+')">'
-      + '<div class="mg-header"><div class="mg-date">'+dateCap+'</div>'
+      + '<div class="mg-header"><div class="mg-date">'+dateHtml+'</div>'
       + '<span class="ts '+tsClass+'">'+label+'</span></div>'
       + '<div class="mg-players">'+chips+gkChips+'</div>'
       + '</div>';
