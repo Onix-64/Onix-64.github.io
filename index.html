@@ -1001,7 +1001,7 @@ function renderHome() {
   var dateCap = ds.charAt(0).toUpperCase()+ds.slice(1);
   var bannerDateEl = document.getElementById('banner-date');
   if (m.test) {
-    bannerDateEl.innerHTML = dateCap + ' - <span style="color:var(--red);">PLANNING ALEATOIRE POUR</span> TEST';
+    bannerDateEl.innerHTML = dateCap + '<br><span style="color:var(--red);">- PLANNING ALEATOIRE POUR TEST</span>';
   } else {
     bannerDateEl.textContent = dateCap;
   }
