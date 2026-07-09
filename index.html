@@ -107,6 +107,7 @@
     .plan-tab { flex:1; padding:10px; border-radius:var(--r-md); border:0.5px solid var(--border2); background:var(--bg2); color:var(--text2); font-size:13px; font-weight:700; cursor:pointer; text-transform:uppercase; }
     .plan-tab.active { background:var(--gold); color:var(--bg); border-color:var(--gold); }
     .match-general { background:var(--bg2); border-radius:var(--r-md); border:0.5px solid var(--border); padding:12px 14px; margin-bottom:10px; cursor:pointer; }
+    .match-general.mg-highlight { background:linear-gradient(135deg, var(--gold-bg), var(--bg2)); border:1.5px solid var(--gold); box-shadow:0 2px 12px rgba(232,193,74,0.18); }
     .mg-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
     .mg-date { font-size:13px; font-weight:800; color:var(--text); }
     .mg-players { display:flex; flex-wrap:wrap; gap:5px; }
@@ -831,6 +832,15 @@ setInterval(function() {
 
 // ══ PLANNING FIXE (saison Septembre-Décembre 2026) ══
 var FIXED_PLANNING = {
+  // Mardis d'été à blanc, pour tester le vote et les notifications avant la saison.
+  // Joueurs tirés au hasard, marqués "test: true" pour l'étiquette d'avertissement.
+  '2026-07-14': { players: [3,4,5,6,7,8,12,13],    goalkeepers: [15,16], test: true },
+  '2026-07-21': { players: [1,3,4,5,7,8,9,12],     goalkeepers: [15,16], test: true },
+  '2026-07-28': { players: [1,2,4,5,6,10,11,18],   goalkeepers: [15,16], test: true },
+  '2026-08-04': { players: [1,3,4,6,7,11,13,18],   goalkeepers: [15,16], test: true },
+  '2026-08-11': { players: [1,2,6,7,10,12,14,18],  goalkeepers: [15,16], test: true },
+  '2026-08-18': { players: [1,2,4,6,7,9,13,18],    goalkeepers: [15,16], test: true },
+  '2026-08-25': { players: [3,4,5,6,7,8,9,13],     goalkeepers: [15,16], test: true },
   '2026-09-01': { players: [1,2,4,6,8,9,12,13],    goalkeepers: [15,16] },
   '2026-09-08': { players: [3,4,5,6,7,8,12,14],    goalkeepers: [15,16] },
   '2026-09-15': { players: [1,2,3,4,7,9,13,18],    goalkeepers: [15,16] },
@@ -893,6 +903,7 @@ var planning = Object.keys(FIXED_PLANNING).sort().map(function(key) {
   var fixed = FIXED_PLANNING[key];
   return {
     date: date,
+    test: !!fixed.test,
     players: fixed.players.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean),
     goalkeepers: fixed.goalkeepers.map(function(id){ return PLAYERS.find(function(p){ return p.id===id; }); }).filter(Boolean)
   };
@@ -987,7 +998,13 @@ function renderHome() {
   }
 
   var ds = m.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  document.getElementById('banner-date').textContent = ds.charAt(0).toUpperCase()+ds.slice(1);
+  var dateCap = ds.charAt(0).toUpperCase()+ds.slice(1);
+  var bannerDateEl = document.getElementById('banner-date');
+  if (m.test) {
+    bannerDateEl.innerHTML = dateCap + ' - <span style="color:var(--red);">PLANNING ALEATOIRE POUR</span> TEST';
+  } else {
+    bannerDateEl.textContent = dateCap;
+  }
 
   // ── Détermination du groupe des 10 ──
   // Séparation gardiens / joueurs de champ
@@ -1179,15 +1196,24 @@ function renderPlanning() { renderPlanningGeneral(); }
 
 function renderPlanningGeneral() {
   var nextIdx = getNextMatchIndex();
+  var now = new Date();
   document.getElementById('planning-general').innerHTML = planning.map(function(m, i) {
+    // On efface automatiquement l'encart d'un mardi passé, à partir du mercredi
+    // suivant vers 12h (le match reste bien sûr dans l'historique/les votes).
+    var hideCutoff = new Date(m.date);
+    hideCutoff.setDate(hideCutoff.getDate() + 1);
+    hideCutoff.setHours(12, 0, 0, 0);
+    if (now >= hideCutoff) return '';
+
     var ds = m.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
     var dateCap = ds.charAt(0).toUpperCase()+ds.slice(1);
     var chips = m.players.map(function(p){return '<span class="mg-chip">'+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var gkChips = m.goalkeepers.map(function(p){return '<span class="mg-chip gk">🥅 '+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var isPast = m.date < new Date(new Date().setHours(18,0,0,0));
     var label = i === nextIdx ? 'Mardi prochain' : (isPast ? 'Passé' : 'À venir');
-    var tsClass = i === nextIdx ? 'ts-next' : (isPast ? 'ts-plain' : 'ts-plain');
-    return '<div class="match-general" onclick="openMatch('+i+')">'
+    var tsClass = i === nextIdx ? 'ts-next' : 'ts-plain';
+    var cardClass = 'match-general' + (i === nextIdx ? ' mg-highlight' : '');
+    return '<div class="'+cardClass+'" onclick="openMatch('+i+')">'
       + '<div class="mg-header"><div class="mg-date">'+dateCap+'</div>'
       + '<span class="ts '+tsClass+'">'+label+'</span></div>'
       + '<div class="mg-players">'+chips+gkChips+'</div>'
@@ -2781,7 +2807,7 @@ function loginUser(user) {
   var badge = document.getElementById('user-badge');
   badge.textContent = (user.isAdmin && user.id === 0) ? 'ADMIN' : user.isVisitor ? '👁 Visiteur' : formatName(user.prenom, user.nom);
   var navResults = document.getElementById('nav-results');
-  if (navResults) navResults.style.display = (user.isAdmin && user.id !== 1) ? 'flex' : 'none';
+  if (navResults) navResults.style.display = 'none'; // Onglet masqué pour tout le monde
   var navEquipes = document.getElementById('nav-equipes');
   if (navEquipes) navEquipes.style.display = (user.isAdmin || user.id === 1) ? 'flex' : 'none';
   var navSettings = document.getElementById('nav-settings');
