@@ -387,11 +387,11 @@
             <thead>
               <tr style="border-bottom:0.5px solid var(--border);">
                 <th style="text-align:left;padding:8px 16px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Joueur</th>
-                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Marque</th>
-                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Défend</th>
-                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Endur.</th>
-                <th style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;">Vivac.</th>
-                <th style="padding:8px 4px;color:var(--gold);font-weight:700;font-size:10px;text-transform:uppercase;">Note</th>
+                <th onclick="sortEqRoster('marque')" style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;cursor:pointer;" id="eq-th-marque">Marque</th>
+                <th onclick="sortEqRoster('defend')" style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;cursor:pointer;" id="eq-th-defend">Défend</th>
+                <th onclick="sortEqRoster('endur')" style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;cursor:pointer;" id="eq-th-endur">Endur.</th>
+                <th onclick="sortEqRoster('vivac')" style="padding:8px 4px;color:var(--text3);font-weight:700;font-size:10px;text-transform:uppercase;cursor:pointer;" id="eq-th-vivac">Vivac.</th>
+                <th onclick="sortEqRoster('note')" style="padding:8px 4px;color:var(--gold);font-weight:700;font-size:10px;text-transform:uppercase;cursor:pointer;" id="eq-th-note">Note</th>
               </tr>
             </thead>
             <tbody id="eq-roster-tbody"></tbody>
@@ -2172,6 +2172,24 @@ var eqSelectedField = new Set();
 var eqSelectedKeepers = new Set();
 var eqResults = [];
 var eqResultIndex = 0;
+var eqSortCol = null; // colonne de tri actuelle
+
+function sortEqRoster(col) {
+  if (!eqRoster) return;
+  eqSortCol = col;
+  eqRoster.field.sort(function(a, b){
+    var va = col === 'note' ? eqNote(a) : (a[col]||0);
+    var vb = col === 'note' ? eqNote(b) : (b[col]||0);
+    return vb - va;
+  });
+  ['marque','defend','endur','vivac','note'].forEach(function(c){
+    var th = document.getElementById('eq-th-'+c);
+    if (!th) return;
+    var label = {marque:'Marque',defend:'Défend',endur:'Endur.',vivac:'Vivac.',note:'Note'}[c];
+    th.textContent = label + (c === col ? ' ▼' : '');
+  });
+  renderEquipesRoster();
+}
 
 function eqNote(p){ return (p.marque||0)+(p.defend||0)+(p.endur||0)+(p.vivac||0); }
 
