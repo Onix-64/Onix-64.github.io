@@ -2491,6 +2491,19 @@ function validerEquipes() {
     eqHistory.push(entry);
     renderEqHistory();
     document.getElementById('eq-confirm-msg').style.display = 'block';
+    setTimeout(function(){
+      // On repart de zéro pour le prochain match : plus personne de coché,
+      // et on referme le bloc résultat en attendant une nouvelle génération.
+      eqSelectedField.clear();
+      eqSelectedKeepers.clear();
+      eqResults = [];
+      eqResultIndex = 0;
+      var wrap = document.getElementById('eq-result-wrap');
+      if (wrap) wrap.style.display = 'none';
+      renderEqFieldList();
+      renderEqGkPicks();
+      updateEqGenerateState();
+    }, 1200);
   }).catch(function(){
     if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
   });
@@ -2527,10 +2540,10 @@ function renderEqHistory() {
     var bList = m.teamB.players.map(nameOf).concat(m.teamB.keeper ? [nameOf(m.teamB.keeper)+' (G)'] : []);
     var scoreAVal = (typeof m.scoreA === 'number') ? m.scoreA : '';
     var scoreBVal = (typeof m.scoreB === 'number') ? m.scoreB : '';
-    var scoreInputStyle = 'width:30px;text-align:center;font-size:16px;font-weight:900;color:var(--gold);background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:3px 0;font-family:inherit;';
-    var scoreHtml = '<div style="display:flex;flex-direction:row;align-items:center;justify-content:center;height:100%;gap:4px;">'
+    var scoreInputStyle = 'width:28px;flex-shrink:0;text-align:center;font-size:15px;font-weight:900;color:var(--gold);background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:3px 0;font-family:inherit;';
+    var scoreHtml = '<div style="display:flex;flex-direction:row;flex-wrap:nowrap;align-items:center;justify-content:center;height:100%;gap:3px;white-space:nowrap;">'
       + '<input type="number" min="0" value="'+scoreAVal+'" placeholder="-" style="'+scoreInputStyle+'" onchange="updateEqHistoryScore(\''+key+'\',\'scoreA\',this.value)">'
-      + '<span style="font-size:12px;color:var(--text3);">-</span>'
+      + '<span style="font-size:12px;color:var(--text3);flex-shrink:0;">-</span>'
       + '<input type="number" min="0" value="'+scoreBVal+'" placeholder="-" style="'+scoreInputStyle+'" onchange="updateEqHistoryScore(\''+key+'\',\'scoreB\',this.value)">'
       + '</div>';
     return '<div style="padding:12px 16px;border-bottom:0.5px solid var(--border);">'
@@ -2540,7 +2553,7 @@ function renderEqHistory() {
         + '<div style="font-size:10px;font-weight:800;color:var(--teamWest);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">West All Stars</div>'
         + aList.map(function(n){ return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+n+'</div>'; }).join('')
       + '</div>'
-      + '<div style="min-width:78px;">'+scoreHtml+'</div>'
+      + '<div style="width:auto;min-width:70px;">'+scoreHtml+'</div>'
       + '<div style="text-align:center;">'
         + '<div style="font-size:10px;font-weight:800;color:var(--teamEast);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">East All Stars</div>'
         + bList.map(function(n){ return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+n+'</div>'; }).join('')
