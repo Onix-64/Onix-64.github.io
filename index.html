@@ -21,13 +21,14 @@
       --amber:#fbbf24; --amber-bg:#201508;
       --purple:#e8c14a;
       --r-sm:8px; --r-md:12px; --r-lg:16px;
-      --teamWest:var(--green); --teamWest-bg:var(--green-bg);
-      --teamWestStar1:var(--green); --teamWestStar2:var(--green);
-      --teamEast:var(--red); --teamEast-bg:var(--red-bg);
-      --teamEastStar:var(--red);
+      --teamWest:var(--green); --teamWest-bg:var(--green-bg); --teamWestStar:var(--green);
+      --teamEast:var(--red); --teamEast-bg:var(--red-bg); --teamEastStar:var(--red);
     }
     * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
     body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:var(--bg); color:var(--text); max-width:480px; margin:0 auto; min-height:100vh; }
+    input[type="number"]::-webkit-outer-spin-button,
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    input[type="number"] { -moz-appearance:textfield; appearance:textfield; }
 
     #splash { position:fixed; inset:0; z-index:9999; background:#0d0d0d; display:flex; align-items:center; justify-content:center; }
     #splash img { width:85%; max-width:360px; display:block; }
@@ -214,10 +215,8 @@
       --red:#dc2626; --red-bg:#fee2e2;
       --amber:#d97706; --amber-bg:#fef3c7;
       --purple:#7c3aed;
-      --teamWest:#dc2626; --teamWest-bg:#fee2e2;
-      --teamWestStar1:#dc2626; --teamWestStar2:#e8c14a;
-      --teamEast:#2563eb; --teamEast-bg:#dbeafe;
-      --teamEastStar:#2563eb;
+      --teamWest:#dc2626; --teamWest-bg:#fee2e2; --teamWestStar:#dc2626;
+      --teamEast:#2563eb; --teamEast-bg:#dbeafe; --teamEastStar:#2563eb;
     }
     body.theme-light .header { background:#ffffff; }
     body.theme-light .bottom-nav { background:#ffffff; }
@@ -431,21 +430,19 @@
       <div style="display:flex;gap:10px;margin-bottom:10px;">
         <!-- West All Stars -->
         <div style="flex:1;background:var(--teamWest-bg);border:0.5px solid var(--teamWest);border-radius:var(--r-md);padding:14px;">
-          <div style="font-size:11px;font-weight:800;color:var(--teamWest);text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:6px;"><span style="color:var(--teamWestStar1);">★</span><span style="color:var(--teamWestStar2);">★</span> West All Stars</div>
-          <input type="number" min="0" id="eq-score-a" placeholder="0" style="display:block;width:56px;margin:0 auto 10px;text-align:center;font-size:28px;font-weight:900;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px 0;color:var(--teamWest);font-family:inherit;" />
+          <div style="font-size:11px;font-weight:800;color:var(--teamWest);text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:10px;"><span style="color:var(--teamWestStar);">★★</span> West All Stars <span style="color:var(--teamWestStar);">★★</span></div>
           <div id="eq-team-a" style="display:flex;flex-direction:column;gap:3px;"></div>
         </div>
         <!-- East All Stars -->
         <div style="flex:1;background:var(--teamEast-bg);border:0.5px solid var(--teamEast);border-radius:var(--r-md);padding:14px;">
-          <div style="font-size:11px;font-weight:800;color:var(--teamEast);text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:6px;"><span style="color:var(--teamEastStar);">★★</span> East All Stars</div>
-          <input type="number" min="0" id="eq-score-b" placeholder="0" style="display:block;width:56px;margin:0 auto 10px;text-align:center;font-size:28px;font-weight:900;background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px 0;color:var(--teamEast);font-family:inherit;" />
+          <div style="font-size:11px;font-weight:800;color:var(--teamEast);text-transform:uppercase;letter-spacing:1px;text-align:center;margin-bottom:10px;"><span style="color:var(--teamEastStar);">★★</span> East All Stars <span style="color:var(--teamEastStar);">★★</span></div>
           <div id="eq-team-b" style="display:flex;flex-direction:column;gap:3px;"></div>
         </div>
       </div>
       <div id="eq-balance-note" style="font-size:11px;color:var(--text3);text-align:center;margin-bottom:10px;"></div>
       <div style="display:flex;gap:8px;">
-        <button onclick="regenEquipes()" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:12px;font-size:13px;font-weight:700;cursor:pointer;">🔄 Régénérer</button>
-        <button onclick="validerEquipes()" style="flex:2;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:12px;font-size:13px;font-weight:800;cursor:pointer;">✓ Valider ce match</button>
+        <button onclick="regenEquipes()" id="eq-regen-btn" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:12px;font-size:13px;font-weight:700;cursor:pointer;">🔄 Régénérer</button>
+        <button onclick="validerEquipes()" id="eq-validate-btn" style="flex:2;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:12px;font-size:13px;font-weight:800;cursor:pointer;">✓ Valider ce match</button>
       </div>
       <div id="eq-confirm-msg" style="display:none;text-align:center;font-size:12px;color:var(--green);margin-top:8px;font-weight:700;">✓ Match enregistré !</div>
     </div>
@@ -2234,7 +2231,7 @@ function loadEquipesData() {
     }
     db.ref('equipesHistory').once('value').then(function(hsnap){
       var hval = hsnap.val();
-      eqHistory = hval ? Object.values(hval) : [];
+      eqHistory = hval ? Object.keys(hval).map(function(k){ var e = hval[k]; e._key = k; return e; }) : [];
       renderEquipesRoster();
       renderEqFieldList();
       renderEqGkPicks();
@@ -2441,6 +2438,8 @@ function renderEqResult(cfg) {
   if (!wrap) return;
   wrap.style.display = 'block';
   document.getElementById('eq-confirm-msg').style.display = 'none';
+  var validateBtn = document.getElementById('eq-validate-btn');
+  if (validateBtn) { validateBtn.disabled = false; validateBtn.style.opacity = '1'; }
 
   function teamBlock(containerId, players, keeper, colorVar) {
     var el = document.getElementById(containerId);
@@ -2456,8 +2455,6 @@ function renderEqResult(cfg) {
   teamBlock('eq-team-b', cfg.teamB, cfg.kB, 'var(--teamEast)');
   var bn = document.getElementById('eq-balance-note');
   if (bn) bn.textContent = 'Équilibre estimé : '+cfg.cost.toFixed(1)+' pt(s) — plus c\'est bas, plus c\'est serré.';
-  document.getElementById('eq-score-a').value = '';
-  document.getElementById('eq-score-b').value = '';
 }
 
 function genEquipes() {
@@ -2474,22 +2471,40 @@ function regenEquipes() {
 
 function validerEquipes() {
   if (!eqResults.length) return;
+  var btn = document.getElementById('eq-validate-btn');
+  if (btn) {
+    if (btn.disabled) return; // évite tout double-clic / double envoi
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+  }
   var cfg = eqResults[eqResultIndex];
-  var scoreA = document.getElementById('eq-score-a').value;
-  var scoreB = document.getElementById('eq-score-b').value;
   var entry = {
     date: new Date().toISOString(),
     teamA: { players: cfg.teamA.map(function(p){return p.id;}), keeper: cfg.kA?cfg.kA.id:null },
     teamB: { players: cfg.teamB.map(function(p){return p.id;}), keeper: cfg.kB?cfg.kB.id:null },
-    scoreA: scoreA !== '' ? parseInt(scoreA) : null,
-    scoreB: scoreB !== '' ? parseInt(scoreB) : null
+    scoreA: null,
+    scoreB: null
   };
-  eqHistory.push(entry);
   var key = 'match_' + Date.now();
   db.ref('equipesHistory/'+key).set(entry).then(function(){
+    entry._key = key;
+    eqHistory.push(entry);
     renderEqHistory();
     document.getElementById('eq-confirm-msg').style.display = 'block';
+  }).catch(function(){
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
   });
+}
+
+function updateEqHistoryScore(key, side, rawValue) {
+  var entry = eqHistory.find(function(m){ return m._key === key; });
+  if (!entry) return;
+  var val = rawValue !== '' ? parseInt(rawValue, 10) : null;
+  if (val !== null && isNaN(val)) return;
+  entry[side] = val;
+  // Firebase Realtime Database supprime les clés dont la valeur est null :
+  // on écrit donc explicitement chaque champ pour rester cohérent avec la lecture.
+  db.ref('equipesHistory/'+key+'/'+side).set(val);
 }
 
 function renderEqHistory() {
@@ -2506,23 +2521,28 @@ function renderEqHistory() {
     return k ? k.name : id;
   }
   list.innerHTML = eqHistory.slice().reverse().map(function(m, i){
+    var key = m._key || '';
     var d = new Date(m.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
     var aList = m.teamA.players.map(nameOf).concat(m.teamA.keeper ? [nameOf(m.teamA.keeper)+' (G)'] : []);
     var bList = m.teamB.players.map(nameOf).concat(m.teamB.keeper ? [nameOf(m.teamB.keeper)+' (G)'] : []);
-    var hasScore = (m.scoreA !== null && m.scoreB !== null);
-    var scoreHtml = hasScore
-      ? '<span style="font-size:18px;font-weight:900;color:var(--gold);white-space:nowrap;">'+m.scoreA+' - '+m.scoreB+'</span>'
-      : '<span style="font-size:11px;color:var(--text3);">vs</span>';
+    var scoreAVal = (typeof m.scoreA === 'number') ? m.scoreA : '';
+    var scoreBVal = (typeof m.scoreB === 'number') ? m.scoreB : '';
+    var scoreInputStyle = 'width:34px;text-align:center;font-size:16px;font-weight:900;color:var(--gold);background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:3px 0;font-family:inherit;';
+    var scoreHtml = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:4px;">'
+      + '<input type="number" min="0" value="'+scoreAVal+'" placeholder="-" style="'+scoreInputStyle+'" onchange="updateEqHistoryScore(\''+key+'\',\'scoreA\',this.value)">'
+      + '<span style="font-size:10px;color:var(--text3);">-</span>'
+      + '<input type="number" min="0" value="'+scoreBVal+'" placeholder="-" style="'+scoreInputStyle+'" onchange="updateEqHistoryScore(\''+key+'\',\'scoreB\',this.value)">'
+      + '</div>';
     return '<div style="padding:12px 16px;border-bottom:0.5px solid var(--border);">'
       + '<div style="font-size:10px;color:var(--text3);text-align:center;margin-bottom:8px;">'+d+'</div>'
-      + '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;">'
+      + '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:stretch;">'
       + '<div style="text-align:center;">'
-        + '<div style="font-size:10px;font-weight:800;color:var(--teamWest);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">West</div>'
+        + '<div style="font-size:10px;font-weight:800;color:var(--teamWest);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">West All Stars</div>'
         + aList.map(function(n){ return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+n+'</div>'; }).join('')
       + '</div>'
-      + '<div style="display:flex;align-items:center;justify-content:center;min-width:44px;padding-top:14px;">'+scoreHtml+'</div>'
+      + '<div style="min-width:44px;">'+scoreHtml+'</div>'
       + '<div style="text-align:center;">'
-        + '<div style="font-size:10px;font-weight:800;color:var(--teamEast);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">East</div>'
+        + '<div style="font-size:10px;font-weight:800;color:var(--teamEast);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">East All Stars</div>'
         + bList.map(function(n){ return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+n+'</div>'; }).join('')
       + '</div>'
       + '</div>'
