@@ -1,4 +1,8 @@
-const CACHE_NAME = 'foot-mardi-v15';
+// IMPORTANT : garde ce numéro identique à APP_VERSION dans public/index.html.
+// À chaque nouvelle mise en ligne, change les deux en même temps (même date
+// JJMMAA) : ça force les téléphones à jeter l'ancien cache et à récupérer la
+// dernière version, en plus d'afficher le bon numéro dans le bandeau.
+const CACHE_NAME = 'foot-mardi-v1.1.100726';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png'];
 
 self.addEventListener('install', event => {
