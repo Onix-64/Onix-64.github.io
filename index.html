@@ -294,7 +294,10 @@
         <div class="header-season">INDOOR64<br>Septembre 2026 à Décembre 2026</div>
       </div>
     </div>
-    <div class="header-badge" id="user-badge">...</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:-6px;">
+      <div class="header-badge" id="user-badge">...</div>
+      <div id="app-version-badge" style="font-size:9px;font-weight:600;color:var(--text3);"></div>
+    </div>
   </div>
   <div class="gold-line"></div>
 </div>
@@ -685,6 +688,19 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
 <script>
+
+// ══ VERSION DE L'APPLI (affichée dans le bandeau, sous le nom du joueur) ══
+// À incrémenter/mettre à jour à chaque modification déployée : les 6 derniers
+// chiffres = date du jour (JJMMAA). Ça permet de vérifier en un coup d'œil que
+// tout le monde a bien la dernière version installée.
+// IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
+// valeur — ça force le service worker à jeter l'ancien cache et à recharger
+// la nouvelle version chez tout le monde.
+var APP_VERSION = '1.1.100726';
+document.addEventListener('DOMContentLoaded', function() {
+  var vEl = document.getElementById('app-version-badge');
+  if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
+});
 
 // ══ FIREBASE (synchronisation temps réel des votes + notifications push) ══
 // 1. Va sur https://console.firebase.google.com et crée un projet (gratuit)
