@@ -700,7 +700,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.120726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2635,13 +2635,14 @@ function renderEqHistory() {
         + '<div style="font-size:10px;color:var(--text3);text-align:center;">'+d+'</div>'
         + '<button onclick="deleteEqHistoryMatch(\''+key+'\')" title="Supprimer ce match" style="position:absolute;right:0;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--red);font-size:14px;cursor:pointer;padding:2px 4px;line-height:1;">🗑</button>'
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;margin-bottom:6px;">'
+      + '<div style="display:grid;grid-template-columns:1fr 72px 1fr;gap:6px;align-items:center;margin-bottom:6px;">'
         + '<div style="font-size:10px;font-weight:800;color:var(--teamWest);text-transform:uppercase;letter-spacing:0.5px;text-align:right;white-space:nowrap;">West All Stars</div>'
         + scoreHtml
         + '<div style="font-size:10px;font-weight:800;color:var(--teamEast);text-transform:uppercase;letter-spacing:0.5px;text-align:left;white-space:nowrap;">East All Stars</div>'
       + '</div>'
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'
+      + '<div style="display:grid;grid-template-columns:1fr 72px 1fr;gap:6px;">'
         + '<div style="text-align:right;">' + aItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName, 'right'); }).join('') + '</div>'
+        + '<div></div>'
         + '<div style="text-align:left;">' + bItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName, 'left'); }).join('') + '</div>'
       + '</div>'
       + '</div>';
