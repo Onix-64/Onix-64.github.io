@@ -2601,10 +2601,11 @@ function renderEqHistory() {
     var k = eqRoster.keepers.find(function(k){return k.id===id;});
     return k ? k.name : id;
   }
-  function playerLineHtml(id, isKeeper, matchKey, guestName) {
+  function playerLineHtml(id, isKeeper, matchKey, guestName, side) {
     if (id === 'ext') {
       var safeVal = (guestName || '').replace(/"/g, '&quot;');
-      return '<div style="padding:1px 0;display:flex;align-items:center;justify-content:center;gap:3px;">'
+      var justify = side === 'right' ? 'flex-end' : 'flex-start';
+      return '<div style="padding:1px 0;display:flex;align-items:center;justify-content:'+justify+';gap:3px;">'
         + '<input type="text" value="'+safeVal+'" placeholder="Joueur extérieur" maxlength="30"'
         + ' style="width:112px;text-align:center;background:var(--bg3);border:0.5px dashed var(--gold);border-radius:5px;padding:2px 4px;font-size:11px;color:var(--text);font-family:inherit;"'
         + ' onchange="updateEqHistoryGuestName(\''+matchKey+'\', this.value)">'
@@ -2640,8 +2641,8 @@ function renderEqHistory() {
         + '<div style="font-size:10px;font-weight:800;color:var(--teamEast);text-transform:uppercase;letter-spacing:0.5px;text-align:left;white-space:nowrap;">East All Stars</div>'
       + '</div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'
-        + '<div style="text-align:center;">' + aItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName); }).join('') + '</div>'
-        + '<div style="text-align:center;">' + bItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName); }).join('') + '</div>'
+        + '<div style="text-align:right;">' + aItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName, 'right'); }).join('') + '</div>'
+        + '<div style="text-align:left;">' + bItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName, 'left'); }).join('') + '</div>'
       + '</div>'
       + '</div>';
   }).join('');
