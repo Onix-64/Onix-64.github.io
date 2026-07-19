@@ -2,7 +2,7 @@
 // À chaque nouvelle mise en ligne, change les deux en même temps (même date
 // JJMMAA) : ça force les téléphones à jeter l'ancien cache et à récupérer la
 // dernière version, en plus d'afficher le bon numéro dans le bandeau.
-const CACHE_NAME = 'foot-mardi-v1.2.190726';
+const CACHE_NAME = 'foot-mardi-v1.1.100726';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png'];
 
 self.addEventListener('install', event => {
@@ -73,14 +73,13 @@ messaging.onBackgroundMessage(payload => {
     return;
   }
 
-  const notif = payload.notification || {};
   const inPlanning = data.inPlanning === '1';
   const actions = inPlanning
     ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
     : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }];
 
-  self.registration.showNotification(notif.title, {
-    body: notif.body,
+  self.registration.showNotification(data.title || 'Foot du mardi', {
+    body: data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: data.matchId ? ('foot-mardi-' + data.matchId) : undefined,
