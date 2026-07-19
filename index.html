@@ -700,7 +700,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.190726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2031,7 +2031,14 @@ function renderNotifs() {
     if (notifCard) notifCard.classList.add('hidden');
   } else if (currentUser && currentUser.isAdmin) {
     if (adminCard) adminCard.classList.remove('hidden');
-    if (notifCard) notifCard.classList.add('hidden');
+    // Le compte "Admin" générique (id 0) ne joue pas, pas besoin de notifs perso.
+    // Un admin qui est aussi un vrai joueur (ex: Arnaud, id 1) doit pouvoir
+    // activer ses notifications comme n'importe quel autre joueur.
+    if (currentUser.id === 0) {
+      if (notifCard) notifCard.classList.add('hidden');
+    } else {
+      if (notifCard) notifCard.classList.remove('hidden');
+    }
     renderAdminPanel();
   } else {
     if (adminCard) adminCard.classList.add('hidden');
@@ -2725,7 +2732,7 @@ function refreshNotifToggle() {
   // actuellement) a bien un token enregistré dans Firebase.
   toggle.classList.remove('on');
   if (sub) sub.textContent = 'Vérification...';
-  if (currentUser && !currentUser.isAdmin) {
+  if (currentUser && currentUser.id !== 0) {
     db.ref('fcmTokens/' + currentUser.id).once('value').then(function(snap) {
       if (snap.exists() && snap.val()) {
         toggle.classList.add('on');
@@ -2741,7 +2748,7 @@ function refreshNotifToggle() {
 }
 
 function enableNotifications() {
-  if (!currentUser || currentUser.isAdmin) return;
+  if (!currentUser || currentUser.id === 0) return;
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {
     alert("Les notifications ne sont pas disponibles sur cet appareil/navigateur.");
     return;
@@ -2852,7 +2859,7 @@ function loginUser(user) {
   }
   if (!user.isVisitor && user.id !== 0) {
     db.ref('connectedPlayers/' + user.id).set(firebase.database.ServerValue.TIMESTAMP);
-    if (!user.isAdmin && 'Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'denied') {
+    if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'denied') {
       db.ref('fcmTokens/' + user.id).once('value').then(function(snap) {
         if (!snap.exists() || !snap.val()) {
           enableNotifications();
