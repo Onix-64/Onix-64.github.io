@@ -492,7 +492,7 @@
 
     <div class="card" id="card-notifications">
       <div class="card-lbl">Notifications</div>
-      <div class="toggle-row" style="cursor:pointer" onclick="enableNotifications()">
+      <div class="toggle-row" style="cursor:pointer" onclick="toggleNotifications()">
         <div><div class="tgl-lbl">Notifications push</div><div class="tgl-sub" id="notif-status-sub">Pour recevoir le rappel du dimanche</div></div>
         <button class="toggle" id="notif-toggle"></button>
       </div>
@@ -2745,6 +2745,39 @@ function refreshNotifToggle() {
       if (sub) sub.textContent = 'Pour recevoir le rappel du dimanche';
     });
   }
+}
+
+function toggleNotifications() {
+  if (!currentUser || currentUser.id === 0) return;
+  var toggle = document.getElementById('notif-toggle');
+  var isOn = toggle && toggle.classList.contains('on');
+  if (isOn) {
+    disableNotifications();
+  } else {
+    enableNotifications();
+  }
+}
+
+function disableNotifications() {
+  if (!currentUser || currentUser.id === 0) return;
+  db.ref('fcmTokens/' + currentUser.id).remove().then(function() {
+    // Best-effort : on invalide aussi le token côté navigateur, sans bloquer
+    // la désactivation si ça échoue (le plus important est déjà fait ci-dessus).
+    try {
+      if ('serviceWorker' in navigator && firebase.messaging) {
+        var messaging = firebase.messaging();
+        navigator.serviceWorker.ready.then(function(registration) {
+          messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration }).then(function(token) {
+            if (token && messaging.deleteToken) messaging.deleteToken(token).catch(function(){});
+          }).catch(function(){});
+        }).catch(function(){});
+      }
+    } catch (e) {}
+    alert("Notifications désactivées.");
+    refreshNotifToggle();
+  }).catch(function(err) {
+    alert("Erreur lors de la désactivation : " + (err && err.message || err));
+  });
 }
 
 function enableNotifications() {
