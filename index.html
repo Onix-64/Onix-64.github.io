@@ -1481,6 +1481,8 @@ function drawCrop() {
   if (!canvas || !_cropImg) return;
   var SIZE = canvas.width; // carré
   var ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   ctx.clearRect(0, 0, SIZE, SIZE);
   // Calcul du rendu : on centre l'image et on applique offset + scale
   var iw = _cropImg.width * _cropScale;
@@ -1508,10 +1510,12 @@ function drawCrop() {
 function confirmCrop() {
   var canvas = document.getElementById('crop-canvas');
   if (!canvas || !_cropImg) return;
-  var SIZE = 600;
+  var SIZE = 900; // 900px : reste net même sur écrans haute densité (280px affiché × ~3x)
   var out = document.createElement('canvas');
   out.width = SIZE; out.height = SIZE;
   var ctx = out.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
   // Recalcul à la résolution finale (canvas affiché est 280px, sortie 600px)
   var displayed = canvas.width;
   var ratio = SIZE / displayed;
