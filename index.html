@@ -700,7 +700,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.3.190726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2825,12 +2825,23 @@ function showScreen(name, btn) {
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
   document.querySelectorAll('.nav-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('screen-'+name).classList.add('active');
-  btn.classList.add('active');
+  if (!btn) btn = document.querySelector('.nav-btn[onclick*="\'' + name + '\'"]');
+  if (btn) btn.classList.add('active');
   if (name==='planning') renderPlanning();
   if (name==='players')  renderPlayers();
   if (name==='results')  renderResultsList();
   if (name==='equipes')  showEquipesScreen();
   if (name==='notifs')   renderNotifs();
+}
+// Le service worker nous prévient quand une notification a été tapée, pour
+// ramener l'utilisateur sur l'écran d'accueil (votes) même si l'appli était
+// déjà ouverte ailleurs (ex: Réglages) au moment du clic.
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'go-home') {
+      showScreen('home');
+    }
+  });
 }
 function closeOv(id) { document.getElementById(id).classList.remove('open'); }
 
