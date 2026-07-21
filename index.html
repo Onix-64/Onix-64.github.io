@@ -700,7 +700,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.5.190726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -935,9 +935,13 @@ var planning = Object.keys(FIXED_PLANNING).sort().map(function(key) {
 // Prochain match à venir (ou dernier si saison terminée)
 function getNextMatchIndex() {
   var now = new Date();
-  now.setHours(18,0,0,0);
   for (var i = 0; i < planning.length; i++) {
-    if (planning[i].date >= now) return i;
+    // Le match du mardi reste "le" match jusqu'au bout de la soirée : on ne
+    // bascule sur le mardi suivant qu'au passage à mercredi (0h).
+    var switchCutoff = new Date(planning[i].date);
+    switchCutoff.setDate(switchCutoff.getDate() + 1);
+    switchCutoff.setHours(0, 0, 0, 0);
+    if (now < switchCutoff) return i;
   }
   return planning.length - 1;
 }
@@ -1233,7 +1237,8 @@ function renderPlanningGeneral() {
     var dateHtml = dateCap + (m.test ? ' - <span style="color:var(--red);">Planning aléatoire pour test</span>' : '');
     var chips = m.players.map(function(p){return '<span class="mg-chip">'+formatName(p.prenom,p.nom)+'</span>';}).join('');
     var gkChips = m.goalkeepers.map(function(p){return '<span class="mg-chip gk">🥅 '+formatName(p.prenom,p.nom)+'</span>';}).join('');
-    var isPast = m.date < new Date(new Date().setHours(18,0,0,0));
+    var todayMidnight = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+    var isPast = m.date < todayMidnight;
     var label = i === nextIdx ? 'Mardi prochain' : (isPast ? 'Passé' : 'À venir');
     var tsClass = i === nextIdx ? 'ts-next' : 'ts-plain';
     var cardClass = 'match-general' + (i === nextIdx ? ' mg-highlight' : '');
