@@ -216,8 +216,8 @@
       --red:#dc2626; --red-bg:#fee2e2;
       --amber:#d97706; --amber-bg:#fef3c7;
       --purple:#7c3aed;
-      --teamWest:#dc2626; --teamWest-bg:#fee2e2; --teamWestStar:#dc2626;
-      --teamEast:#2563eb; --teamEast-bg:#dbeafe; --teamEastStar:#2563eb;
+      --teamWest:#b91c1c; --teamWest-bg:#fee2e2; --teamWestStar:#b91c1c;
+      --teamEast:#1d4ed8; --teamEast-bg:#dbeafe; --teamEastStar:#1d4ed8;
     }
     body.theme-light .header { background:#ffffff; }
     body.theme-light .bottom-nav { background:#ffffff; }
@@ -1017,6 +1017,55 @@ function listenVotes(matchId) {
 function ini(p) { return (p.prenom[0] + p.nom[0]).toUpperCase(); }
 
 // ══ HOME ══
+// Si les équipes du match du jour ont déjà été tirées (auto ou manuellement
+// depuis l'onglet ÉQUIPES), on remplace la carte "Groupe complet" de l'accueil
+// par la composition des deux équipes — prénoms seulement pour la place.
+function renderDrawnTeamsIfAny(matchId) {
+  db.ref('equipesHistory').orderByChild('matchId').equalTo(matchId).once('value').then(function(snap){
+    var val = snap.val();
+    if (!val) return;
+    var entries = Object.keys(val).map(function(k){ return val[k]; })
+      .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
+    var entry = entries[0];
+    if (!entry || !entry.teamA || !entry.teamB) return;
+
+    function firstNameOf(id) {
+      if (id === 'ext') return entry.guestName || 'Joueur ext.';
+      var p = PLAYERS.find(function(x){ return String(x.id) === String(id); });
+      return p ? formatPrenom(p.prenom) : id;
+    }
+
+    var westList = entry.teamA.players.map(firstNameOf)
+      .concat(entry.teamA.keeper ? ['🧤 ' + firstNameOf(entry.teamA.keeper)] : [])
+      .join('<br>');
+    var eastList = entry.teamB.players.map(firstNameOf)
+      .concat(entry.teamB.keeper ? ['🧤 ' + firstNameOf(entry.teamB.keeper)] : [])
+      .join('<br>');
+
+    var isLight = document.body.classList.contains('theme-light');
+    var cardBg     = isLight ? 'var(--bg2)' : '#161616';
+    var cardBorder = isLight ? 'var(--border)' : '#2a2a2a';
+    var checkColor = isLight ? '#15803d' : '#4ade80';
+
+    document.getElementById('group-status').innerHTML =
+      '<div style="width:100%;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:12px;padding:14px 16px;">'
+        + '<div style="font-size:14px;font-weight:800;letter-spacing:0.5px;color:'+checkColor+';text-align:center;margin-bottom:10px;">&#10003; Groupe complet — Tirage effectué</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+          + '<div style="background:var(--teamWest-bg);border:0.5px solid var(--teamWest);border-radius:10px;padding:10px;text-align:center;">'
+            + '<div style="font-size:11px;font-weight:800;color:var(--teamWestStar);">★ WEST ALL STARS ★</div>'
+            + '<div style="margin-top:8px;font-size:12px;font-weight:700;line-height:1.9;color:var(--teamWest);">'+westList+'</div>'
+          + '</div>'
+          + '<div style="background:var(--teamEast-bg);border:0.5px solid var(--teamEast);border-radius:10px;padding:10px;text-align:center;">'
+            + '<div style="font-size:11px;font-weight:800;color:var(--teamEastStar);">★ EAST ALL STARS ★</div>'
+            + '<div style="margin-top:8px;font-size:12px;font-weight:700;line-height:1.9;color:var(--teamEast);">'+eastList+'</div>'
+          + '</div>'
+        + '</div>'
+      + '</div>';
+  }).catch(function(err){
+    console.error('Erreur lors de la vérification du tirage du jour :', err);
+  });
+}
+
 function renderHome() {
   var m = getNextMatch();
   var all = PLAYERS; // tous les joueurs (prévus + non prévus) afin que tous les votes comptent
@@ -1136,7 +1185,7 @@ function renderHome() {
     var goals  = retainedGoals;
     var cardBg     = isLightTheme ? 'var(--bg3)'    : '#0d2018';
     var cardBorder = isLightTheme ? 'var(--border2)' : '#1a9e5c';
-    var champsHTML = champs.map(function(p){ return '<div>'+formatName(p.prenom, p.nom)+'</div>'; }).join('');
+    var champsHTML = champs.map(function(p){ return '<div>'+formatPrenom(p.prenom)+'</div>'; }).join('');
 
     // Compensateurs = dispo hors des 8 retenus affichés
     var retained8Ids = champs.map(function(p){ return p.id; });
@@ -1155,15 +1204,15 @@ function renderHome() {
     var subStyle = 'color:var(--text2);font-size:12px;font-style:italic;margin-top:3px;';
     var goalsHTML = '';
     if (goals.length === 2) {
-      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';text-align:center;">' + goals.map(function(p){ return formatName(p.prenom, p.nom); }).join(' &middot; ') + '</div>';
+      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';text-align:center;">' + goals.map(function(p){ return '🧤 ' + formatPrenom(p.prenom); }).join(' &middot; ') + '</div>';
     } else if (goals.length === 1) {
-      var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+formatName(allAvailableFields[0].prenom, allAvailableFields[0].nom)+'</strong> fera le 10e' : '';
-      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';">'+formatName(goals[0].prenom, goals[0].nom)+'</div>'
+      var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+formatPrenom(allAvailableFields[0].prenom)+'</strong> fera le 10e' : '';
+      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';">🧤 '+formatPrenom(goals[0].prenom)+'</div>'
         + '<div style="'+redStyle+'">Besoin d\'un gardien</div>'
         + (comp1 ? '<div style="'+subStyle+'">'+comp1+'</div>' : '');
     } else {
-      var c1 = allAvailableFields[0] ? formatName(allAvailableFields[0].prenom, allAvailableFields[0].nom) : '';
-      var c2 = allAvailableFields[1] ? formatName(allAvailableFields[1].prenom, allAvailableFields[1].nom) : '';
+      var c1 = allAvailableFields[0] ? formatPrenom(allAvailableFields[0].prenom) : '';
+      var c2 = allAvailableFields[1] ? formatPrenom(allAvailableFields[1].prenom) : '';
       var comp2 = (c1 && c2) ? 'Sinon <strong>'+c1+'</strong> et <strong>'+c2+'</strong> complèteront le groupe' : (c1 ? 'Sinon <strong>'+c1+'</strong> complétera le groupe' : '');
       goalsHTML = '<div style="'+redStyle+'">Besoin de 2 gardiens</div>'
         + (comp2 ? '<div style="'+subStyle+'">'+comp2+'</div>' : '');
@@ -1171,10 +1220,14 @@ function renderHome() {
 
     document.getElementById('group-status').innerHTML =
       '<div style="width:100%;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:12px;padding:14px 16px;">'
-        + '<div style="font-size:15px;font-weight:800;letter-spacing:0.5px;color:'+groupNameColor+';text-align:center;margin-bottom:10px;">&#10003; GROUPE COMPLET</div>'
+        + '<div style="font-size:15px;font-weight:800;letter-spacing:0.5px;color:'+groupNameColor+';text-align:center;margin-bottom:10px;">&#10003; Groupe complet — Tirage à venir</div>'
         + (champs.length ? '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Joueurs</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px;font-weight:700;color:'+groupNameColor+';line-height:1.6;">'+champsHTML+'</div></div>' : '')
         + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Gardiens</div>'+goalsHTML+'</div>'
       + '</div>';
+
+    // Si le tirage automatique (ou manuel) a déjà eu lieu pour ce match, on
+    // remplace cette carte par la composition des deux équipes.
+    renderDrawnTeamsIfAny(getMatchId(m));
   } else if (C.wait === 0) {
     // Tout le monde a voté et on n'arrive toujours pas à 10 : situation
     // réellement problématique, on a besoin de joueurs extérieurs.
@@ -2642,6 +2695,7 @@ function renderEqHistory() {
     var k = eqRoster.keepers.find(function(k){return k.id===id;});
     return k ? k.name : id;
   }
+  function firstNameOnly(fullName) { return fullName.split(' ')[0]; }
   function playerLineHtml(id, isKeeper, matchKey, guestName, side) {
     if (id === 'ext') {
       var safeVal = (guestName || '').replace(/"/g, '&quot;');
@@ -2650,10 +2704,10 @@ function renderEqHistory() {
         + '<input type="text" value="'+safeVal+'" placeholder="Joueur extérieur" maxlength="30"'
         + ' style="width:112px;text-align:center;background:var(--bg3);border:0.5px dashed var(--gold);border-radius:5px;padding:2px 4px;font-size:11px;color:var(--text);font-family:inherit;"'
         + ' onchange="updateEqHistoryGuestName(\''+matchKey+'\', this.value)">'
-        + (isKeeper ? '<span style="font-size:10px;color:var(--text3);">(G)</span>' : '')
+        + (isKeeper ? '<span style="font-size:10px;">🧤</span>' : '')
         + '</div>';
     }
-    return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+nameOf(id)+(isKeeper?' (G)':'')+'</div>';
+    return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+(isKeeper?'🧤 ':'')+firstNameOnly(nameOf(id))+'</div>';
   }
 
   list.innerHTML = eqHistory.slice().reverse().map(function(m, i){
