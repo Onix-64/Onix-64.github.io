@@ -700,7 +700,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.210726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -732,6 +732,31 @@ var VAPID_KEY = "BGNFp1e53PDLUN-wtvD8U-HLBrlpXfVpr9GDsE5WLH5DNvTa2gnE_cGdx_ZXjYY
 if (firebase.messaging && firebase.messaging.isSupported && firebase.messaging.isSupported()) {
   firebase.messaging().onMessage(function(payload) {
     var data = payload.data || {};
+
+    // Notification "Équipes du mardi" (tirage automatique) : même présentation
+    // détaillée que côté service worker (sw.js) quand l'appli est en arrière-plan.
+    if (data.type === 'teams') {
+      var west = [], east = [];
+      try { west = JSON.parse(data.west || '[]'); } catch (e) {}
+      try { east = JSON.parse(data.east || '[]'); } catch (e) {}
+      var westLines = ['🌟 WEST ALL STARS'].concat(west.map(function(n){ return '• ' + n; }));
+      if (data.westKeeper) westLines.push('🥅 ' + data.westKeeper);
+      var eastLines = ['🌟 EAST ALL STARS'].concat(east.map(function(n){ return '• ' + n; }));
+      if (data.eastKeeper) eastLines.push('🥅 ' + data.eastKeeper);
+      var teamsBody = westLines.join('\n') + '\n\n' + eastLines.join('\n');
+
+      navigator.serviceWorker.ready.then(function(registration) {
+        registration.showNotification(data.title || 'Équipes du mardi', {
+          body: teamsBody,
+          icon: 'icons/icon-192.png',
+          badge: 'icons/icon-192.png',
+          tag: data.matchId ? ('foot-mardi-teams-' + data.matchId) : undefined,
+          data: data
+        });
+      });
+      return;
+    }
+
     var inPlanning = data.inPlanning === '1';
     var actions = inPlanning
       ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
