@@ -739,11 +739,11 @@ if (firebase.messaging && firebase.messaging.isSupported && firebase.messaging.i
       var west = [], east = [];
       try { west = JSON.parse(data.west || '[]'); } catch (e) {}
       try { east = JSON.parse(data.east || '[]'); } catch (e) {}
-      var westLines = ['🌟 WEST ALL STARS'].concat(west.map(function(n){ return '• ' + n; }));
-      if (data.westKeeper) westLines.push('🥅 ' + data.westKeeper);
-      var eastLines = ['🌟 EAST ALL STARS'].concat(east.map(function(n){ return '• ' + n; }));
-      if (data.eastKeeper) eastLines.push('🥅 ' + data.eastKeeper);
-      var teamsBody = westLines.join('\n') + '\n\n' + eastLines.join('\n');
+      // Format compact sur 2 lignes : les notifications Android tronquent le
+      // texte au-delà de quelques lignes, une liste "un joueur par ligne" ne tenait pas.
+      var westLine = '🌟 WEST: ' + west.join(', ') + (data.westKeeper ? ', 🧤 ' + data.westKeeper : '');
+      var eastLine = '🌟 EAST: ' + east.join(', ') + (data.eastKeeper ? ', 🧤 ' + data.eastKeeper : '');
+      var teamsBody = westLine + '\n' + eastLine;
 
       navigator.serviceWorker.ready.then(function(registration) {
         registration.showNotification(data.title || 'Équipes du mardi', {

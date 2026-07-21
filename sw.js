@@ -2,7 +2,7 @@
 // À chaque nouvelle mise en ligne, change les deux en même temps (même date
 // JJMMAA) : ça force les téléphones à jeter l'ancien cache et à récupérer la
 // dernière version, en plus d'afficher le bon numéro dans le bandeau.
-const CACHE_NAME = 'foot-mardi-v1.1.210726';
+const CACHE_NAME = 'foot-mardi-v1.1.100726';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png'];
 
 self.addEventListener('install', event => {
@@ -57,11 +57,11 @@ messaging.onBackgroundMessage(payload => {
     let west = [], east = [];
     try { west = JSON.parse(data.west || '[]'); } catch (e) {}
     try { east = JSON.parse(data.east || '[]'); } catch (e) {}
-    const westLines = ['🌟 WEST ALL STARS'].concat(west.map(n => '• ' + n));
-    if (data.westKeeper) westLines.push('🥅 ' + data.westKeeper);
-    const eastLines = ['🌟 EAST ALL STARS'].concat(east.map(n => '• ' + n));
-    if (data.eastKeeper) eastLines.push('🥅 ' + data.eastKeeper);
-    const body = westLines.join('\n') + '\n\n' + eastLines.join('\n');
+    // Format compact sur 2 lignes : les notifications Android tronquent le texte
+    // au-delà de quelques lignes, une liste "un joueur par ligne" ne tenait pas.
+    const westLine = '🌟 WEST: ' + west.join(', ') + (data.westKeeper ? ', 🧤 ' + data.westKeeper : '');
+    const eastLine = '🌟 EAST: ' + east.join(', ') + (data.eastKeeper ? ', 🧤 ' + data.eastKeeper : '');
+    const body = westLine + '\n' + eastLine;
 
     self.registration.showNotification(data.title || 'Équipes du mardi', {
       body: body,
