@@ -521,6 +521,30 @@
         <button class="toggle" id="admin-autodraw-toggle"></button>
       </div>
 
+      <div style="margin:10px 0 8px;">
+        <div class="tgl-lbl" style="margin-bottom:6px;">🤖 Tirage — jour et heure</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <select class="fiche-select" id="admin-autodraw-day" style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:8px 10px;flex:1;">
+            <option value="0">Dimanche</option>
+            <option value="1">Lundi</option>
+            <option value="2">Mardi</option>
+            <option value="3">Mercredi</option>
+            <option value="4">Jeudi</option>
+            <option value="5">Vendredi</option>
+            <option value="6">Samedi</option>
+          </select>
+          <input type="time" id="admin-autodraw-time" class="fiche-input" style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:8px 10px;flex:1;color:var(--text);" value="12:00" />
+        </div>
+        <button onclick="adminSaveAutoDrawSchedule()" style="width:100%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px;">Enregistrer l'heure du tirage</button>
+        <div class="tgl-sub" id="admin-autodraw-schedule-status" style="text-align:center;min-height:16px;margin-top:4px;"></div>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:8px;">
+        <button onclick="adminResendTeamsNotif()" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:10px 8px;font-size:12px;font-weight:700;cursor:pointer;">📤 Renvoyer la notif</button>
+        <button onclick="adminRequestRedraw()" style="flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:10px 8px;font-size:12px;font-weight:700;cursor:pointer;">🔄 Relancer un tirage</button>
+      </div>
+      <div class="tgl-sub" id="admin-redraw-status" style="text-align:center;min-height:16px;margin-bottom:8px;"></div>
+
       <div class="card-lbl" style="margin-top:18px">Planification des envois</div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:12px;">Le bot vérifie ces paramètres avant chaque envoi automatique.</div>
 
@@ -700,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.230726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2162,9 +2186,14 @@ function renderAdminPanel() {
     var toggle = document.getElementById('admin-autodraw-toggle');
     var sub = document.getElementById('admin-autodraw-sub');
     if (toggle) toggle.classList.toggle('on', enabled);
-    if (sub) sub.textContent = enabled
-      ? '✅ Activé — tirage auto le mardi à 12h si le groupe est complet'
-      : "Génère les équipes le mardi à 12h si le groupe est complet";
+    db.ref('settings/schedule/autodraw').once('value').then(function(schedSnap) {
+      var sched = schedSnap.val();
+      var dayLabel = DAY_NAMES_FR[sched && sched.day !== undefined ? sched.day : 2];
+      var timeLabel = (sched && sched.time) || '12:00';
+      if (sub) sub.textContent = enabled
+        ? '✅ Activé — tirage auto ' + dayLabel + ' à ' + timeLabel + ' si le groupe est complet'
+        : 'Génère les équipes ' + dayLabel + ' à ' + timeLabel + ' si le groupe est complet';
+    });
   });
 
   adminLoadSchedule();
@@ -2264,11 +2293,44 @@ function adminSaveSchedule() {
   var remindDay  = document.getElementById('admin-remind-day').value;
   var remindTime = document.getElementById('admin-remind-time').value;
   var status = document.getElementById('admin-schedule-status');
-  db.ref('settings/schedule').set({
+  // update() (et non set()) pour ne jamais écraser la planification du tirage auto
+  db.ref('settings/schedule').update({
     notify: { day: parseInt(notifyDay), time: notifyTime },
     remind: { day: parseInt(remindDay), time: remindTime }
   }).then(function() {
     if (status) { status.textContent = '✅ Planification enregistrée'; setTimeout(function(){ if(status) status.textContent=''; }, 3000); }
+  }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
+}
+
+var DAY_NAMES_FR = ['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+
+function adminSaveAutoDrawSchedule() {
+  var day  = document.getElementById('admin-autodraw-day').value;
+  var time = document.getElementById('admin-autodraw-time').value;
+  var status = document.getElementById('admin-autodraw-schedule-status');
+  db.ref('settings/schedule').update({
+    autodraw: { day: parseInt(day), time: time }
+  }).then(function() {
+    if (status) { status.textContent = '✅ Heure du tirage enregistrée'; setTimeout(function(){ if(status) status.textContent=''; }, 3000); }
+    renderAdminPanel();
+  }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
+}
+
+function adminResendTeamsNotif() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  if (!confirm('Renvoyer la notification des équipes déjà tirées à tous les joueurs concernés ?')) return;
+  var status = document.getElementById('admin-redraw-status');
+  db.ref('matches/' + getMatchId(getNextMatch()) + '/manualResendRequestedAt').set(firebase.database.ServerValue.TIMESTAMP).then(function() {
+    if (status) { status.textContent = '✅ Demande envoyée — le bot renverra la notif dans les prochaines minutes'; setTimeout(function(){ if(status) status.textContent=''; }, 6000); }
+  }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
+}
+
+function adminRequestRedraw() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  if (!confirm('Relancer un nouveau tirage au sort pour ce match et renvoyer la notif à tout le groupe ?')) return;
+  var status = document.getElementById('admin-redraw-status');
+  db.ref('matches/' + getMatchId(getNextMatch()) + '/manualRedrawRequestedAt').set(firebase.database.ServerValue.TIMESTAMP).then(function() {
+    if (status) { status.textContent = '✅ Demande envoyée — nouveau tirage dans les prochaines minutes'; setTimeout(function(){ if(status) status.textContent=''; }, 6000); }
   }).catch(function(err) { alert('Erreur : ' + (err && err.message || err)); });
 }
 
@@ -2288,6 +2350,10 @@ function adminLoadSchedule() {
       if (rd) rd.value = String(s.remind.day !== undefined ? s.remind.day : 3);
       if (rt) rt.value = s.remind.time || '16:00';
     }
+    var ad = document.getElementById('admin-autodraw-day');
+    var at = document.getElementById('admin-autodraw-time');
+    if (ad) ad.value = String(s.autodraw && s.autodraw.day !== undefined ? s.autodraw.day : 2);
+    if (at) at.value = (s.autodraw && s.autodraw.time) || '12:00';
   });
 }
 
