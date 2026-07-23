@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.4.230726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2186,14 +2186,9 @@ function renderAdminPanel() {
     var toggle = document.getElementById('admin-autodraw-toggle');
     var sub = document.getElementById('admin-autodraw-sub');
     if (toggle) toggle.classList.toggle('on', enabled);
-    db.ref('settings/schedule/autodraw').once('value').then(function(schedSnap) {
-      var sched = schedSnap.val();
-      var dayLabel = DAY_NAMES_FR[sched && sched.day !== undefined ? sched.day : 2];
-      var timeLabel = (sched && sched.time) || '12:00';
-      if (sub) sub.textContent = enabled
-        ? '✅ Activé — tirage auto ' + dayLabel + ' à ' + timeLabel + ' si le groupe est complet'
-        : 'Génère les équipes ' + dayLabel + ' à ' + timeLabel + ' si le groupe est complet';
-    });
+    if (sub) sub.textContent = enabled
+      ? '✅ Activé — Tirage auto à la date et heure ci-dessous'
+      : 'Génère les équipes automatiquement si le groupe est complet';
   });
 
   adminLoadSchedule();
