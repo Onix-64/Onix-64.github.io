@@ -700,7 +700,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.230726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2726,7 +2726,10 @@ function renderEqHistory() {
         + (isKeeper ? '<span style="font-size:10px;">🧤</span>' : '')
         + '</div>';
     }
-    return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+(isKeeper?'🧤 ':'')+firstNameOnly(nameOf(id))+'</div>';
+    var name = firstNameOnly(nameOf(id));
+    var gk = isKeeper ? '🧤' : '';
+    var content = (side === 'right') ? (gk ? gk + ' ' + name : name) : (gk ? name + ' ' + gk : name);
+    return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+content+'</div>';
   }
 
   list.innerHTML = eqHistory.slice().reverse().map(function(m, i){
