@@ -700,7 +700,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.210726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1020,6 +1020,13 @@ function ini(p) { return (p.prenom[0] + p.nom[0]).toUpperCase(); }
 // Si les équipes du match du jour ont déjà été tirées (auto ou manuellement
 // depuis l'onglet ÉQUIPES), on remplace la carte "Groupe complet" de l'accueil
 // par la composition des deux équipes — prénoms seulement pour la place.
+// Surnoms utilisés UNIQUEMENT dans les cadres "Groupe complet" de l'accueil
+// (avant/après tirage) et dans les notifications d'équipes — nulle part
+// ailleurs dans l'appli (Effectif, Historique ÉQUIPES, etc. gardent le
+// vrai prénom).
+var HOME_NICKNAMES = { 'Christophe': 'Chris', 'Vincent': 'Mamad' };
+function homeNickname(prenom) { return HOME_NICKNAMES[prenom] || prenom; }
+
 function renderDrawnTeamsIfAny(matchId) {
   db.ref('equipesHistory').orderByChild('matchId').equalTo(matchId).once('value').then(function(snap){
     var val = snap.val();
@@ -1032,7 +1039,7 @@ function renderDrawnTeamsIfAny(matchId) {
     function firstNameOf(id) {
       if (id === 'ext') return entry.guestName || 'Joueur ext.';
       var p = PLAYERS.find(function(x){ return String(x.id) === String(id); });
-      return p ? formatPrenom(p.prenom) : id;
+      return p ? homeNickname(formatPrenom(p.prenom)) : id;
     }
 
     var westList = entry.teamA.players.map(firstNameOf)
@@ -1049,7 +1056,10 @@ function renderDrawnTeamsIfAny(matchId) {
 
     document.getElementById('group-status').innerHTML =
       '<div style="width:100%;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:12px;padding:14px 16px;">'
-        + '<div style="font-size:14px;font-weight:800;letter-spacing:0.5px;color:'+checkColor+';text-align:center;margin-bottom:10px;">&#10003; Groupe complet — Tirage effectué</div>'
+        + '<div style="text-align:center;margin-bottom:16px;">'
+          + '<div style="font-size:14px;font-weight:800;letter-spacing:0.5px;color:'+checkColor+';">GROUPE COMPLET</div>'
+          + '<div style="font-size:13px;font-weight:800;color:'+checkColor+';margin-top:2px;">🏆 Tirage effectué 🏆</div>'
+        + '</div>'
         + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
           + '<div style="background:var(--teamWest-bg);border:0.5px solid var(--teamWest);border-radius:10px;padding:10px;text-align:center;">'
             + '<div style="font-size:11px;font-weight:800;color:var(--teamWestStar);">★ WEST ALL STARS ★</div>'
@@ -1185,7 +1195,10 @@ function renderHome() {
     var goals  = retainedGoals;
     var cardBg     = isLightTheme ? 'var(--bg3)'    : '#0d2018';
     var cardBorder = isLightTheme ? 'var(--border2)' : '#1a9e5c';
-    var champsHTML = champs.map(function(p){ return '<div>'+formatPrenom(p.prenom)+'</div>'; }).join('');
+    var champsHTML = champs.map(function(p, i){
+      var align = (i % 2 === 0) ? 'text-align:right;padding-right:8px;' : 'text-align:left;padding-left:8px;';
+      return '<div style="'+align+'">'+homeNickname(formatPrenom(p.prenom))+'</div>';
+    }).join('');
 
     // Compensateurs = dispo hors des 8 retenus affichés
     var retained8Ids = champs.map(function(p){ return p.id; });
@@ -1204,25 +1217,31 @@ function renderHome() {
     var subStyle = 'color:var(--text2);font-size:12px;font-style:italic;margin-top:3px;';
     var goalsHTML = '';
     if (goals.length === 2) {
-      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';text-align:center;">' + goals.map(function(p){ return '🧤 ' + formatPrenom(p.prenom); }).join(' &middot; ') + '</div>';
+      goalsHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;font-size:13px;font-weight:700;color:'+groupNameColor+';max-width:220px;margin:0 auto;">'
+        + '<div style="text-align:right;padding-right:8px;">🧤 '+homeNickname(formatPrenom(goals[0].prenom))+'</div>'
+        + '<div style="text-align:left;padding-left:8px;">🧤 '+homeNickname(formatPrenom(goals[1].prenom))+'</div>'
+      + '</div>';
     } else if (goals.length === 1) {
-      var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+formatPrenom(allAvailableFields[0].prenom)+'</strong> fera le 10e' : '';
-      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';">🧤 '+formatPrenom(goals[0].prenom)+'</div>'
-        + '<div style="'+redStyle+'">Besoin d\'un gardien</div>'
-        + (comp1 ? '<div style="'+subStyle+'">'+comp1+'</div>' : '');
+      var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+homeNickname(formatPrenom(allAvailableFields[0].prenom))+'</strong> fera le 10e' : '';
+      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';text-align:center;">🧤 '+homeNickname(formatPrenom(goals[0].prenom))+'</div>'
+        + '<div style="'+redStyle+'text-align:center;">Besoin d\'un gardien</div>'
+        + (comp1 ? '<div style="'+subStyle+'text-align:center;">'+comp1+'</div>' : '');
     } else {
-      var c1 = allAvailableFields[0] ? formatPrenom(allAvailableFields[0].prenom) : '';
-      var c2 = allAvailableFields[1] ? formatPrenom(allAvailableFields[1].prenom) : '';
+      var c1 = allAvailableFields[0] ? homeNickname(formatPrenom(allAvailableFields[0].prenom)) : '';
+      var c2 = allAvailableFields[1] ? homeNickname(formatPrenom(allAvailableFields[1].prenom)) : '';
       var comp2 = (c1 && c2) ? 'Sinon <strong>'+c1+'</strong> et <strong>'+c2+'</strong> complèteront le groupe' : (c1 ? 'Sinon <strong>'+c1+'</strong> complétera le groupe' : '');
-      goalsHTML = '<div style="'+redStyle+'">Besoin de 2 gardiens</div>'
-        + (comp2 ? '<div style="'+subStyle+'">'+comp2+'</div>' : '');
+      goalsHTML = '<div style="'+redStyle+'text-align:center;">Besoin de 2 gardiens</div>'
+        + (comp2 ? '<div style="'+subStyle+'text-align:center;">'+comp2+'</div>' : '');
     }
 
     document.getElementById('group-status').innerHTML =
       '<div style="width:100%;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:12px;padding:14px 16px;">'
-        + '<div style="font-size:15px;font-weight:800;letter-spacing:0.5px;color:'+groupNameColor+';text-align:center;margin-bottom:10px;">&#10003; Groupe complet — Tirage à venir</div>'
-        + (champs.length ? '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Joueurs</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px;font-weight:700;color:'+groupNameColor+';line-height:1.6;">'+champsHTML+'</div></div>' : '')
-        + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;">Gardiens</div>'+goalsHTML+'</div>'
+        + '<div style="text-align:center;margin-bottom:16px;">'
+          + '<div style="font-size:15px;font-weight:800;letter-spacing:0.5px;color:'+groupNameColor+';">GROUPE COMPLET</div>'
+          + '<div style="font-size:13px;font-weight:800;color:'+groupNameColor+';margin-top:2px;">Tirage à venir</div>'
+        + '</div>'
+        + (champs.length ? '<div style="margin-bottom:16px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;text-align:center;">Joueurs</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 0px;font-size:13px;font-weight:700;color:'+groupNameColor+';line-height:1.4;max-width:220px;margin:0 auto;">'+champsHTML+'</div></div>' : '')
+        + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;text-align:center;">Gardiens</div>'+goalsHTML+'</div>'
       + '</div>';
 
     // Si le tirage automatique (ou manuel) a déjà eu lieu pour ce match, on
@@ -2695,7 +2714,7 @@ function renderEqHistory() {
     var k = eqRoster.keepers.find(function(k){return k.id===id;});
     return k ? k.name : id;
   }
-  function firstNameOnly(fullName) { return fullName.split(' ')[0]; }
+  function firstNameOnly(fullName) { return homeNickname(fullName.split(' ')[0]); }
   function playerLineHtml(id, isKeeper, matchKey, guestName, side) {
     if (id === 'ext') {
       var safeVal = (guestName || '').replace(/"/g, '&quot;');
