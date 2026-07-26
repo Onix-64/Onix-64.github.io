@@ -2,7 +2,7 @@
 // À chaque nouvelle mise en ligne, change les deux en même temps (même date
 // JJMMAA) : ça force les téléphones à jeter l'ancien cache et à récupérer la
 // dernière version, en plus d'afficher le bon numéro dans le bandeau.
-const CACHE_NAME = 'foot-mardi-v1.4.260726';
+const CACHE_NAME = 'foot-mardi-v1.1.100726';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png'];
 
 self.addEventListener('install', event => {
@@ -73,10 +73,16 @@ messaging.onBackgroundMessage(payload => {
     return;
   }
 
+  // Les boutons de vote ne doivent apparaître que sur une vraie demande de
+  // vote (sondage/rappel) — pas sur une notif purement informative comme
+  // "Groupe complet" (tout le monde a déjà voté à ce stade).
+  const isVoteRequest = data.type === 'vote';
   const inPlanning = data.inPlanning === '1';
-  const actions = inPlanning
-    ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
-    : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }];
+  const actions = isVoteRequest
+    ? (inPlanning
+        ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
+        : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }])
+    : [];
 
   self.registration.showNotification(data.title || 'Foot du mardi', {
     body: data.body || '',

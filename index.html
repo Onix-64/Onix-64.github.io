@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.4.260726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -781,10 +781,13 @@ if (firebase.messaging && firebase.messaging.isSupported && firebase.messaging.i
       return;
     }
 
+    var isVoteRequest = data.type === 'vote';
     var inPlanning = data.inPlanning === '1';
-    var actions = inPlanning
-      ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
-      : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }];
+    var actions = isVoteRequest
+      ? (inPlanning
+          ? [{ action: 'present', title: 'Présent' }, { action: 'pd', title: 'Pas dispo' }]
+          : [{ action: 'pd', title: 'Pas dispo' }, { action: 'sb', title: 'Si besoin' }])
+      : [];
     navigator.serviceWorker.ready.then(function(registration) {
       registration.showNotification(data.title || 'Foot du mardi', {
         body: data.body || '',
