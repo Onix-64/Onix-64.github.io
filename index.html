@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.260726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1241,13 +1241,13 @@ function renderHome() {
     var subStyle = 'color:var(--text2);font-size:12px;font-style:italic;margin-top:3px;';
     var goalsHTML = '';
     if (goals.length === 2) {
-      goalsHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;font-size:13px;font-weight:700;color:'+groupNameColor+';max-width:220px;margin:0 auto;">'
+      goalsHTML = '<div style="display:grid;grid-template-columns:1fr 1fr;font-size:16px;font-weight:700;color:'+groupNameColor+';max-width:260px;margin:0 auto;">'
         + '<div style="text-align:right;padding-right:8px;">🧤 '+homeNickname(formatPrenom(goals[0].prenom))+'</div>'
         + '<div style="text-align:left;padding-left:8px;">🧤 '+homeNickname(formatPrenom(goals[1].prenom))+'</div>'
       + '</div>';
     } else if (goals.length === 1) {
       var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+homeNickname(formatPrenom(allAvailableFields[0].prenom))+'</strong> fera le 10e' : '';
-      goalsHTML = '<div style="font-size:13px;font-weight:700;color:'+groupNameColor+';text-align:center;">🧤 '+homeNickname(formatPrenom(goals[0].prenom))+'</div>'
+      goalsHTML = '<div style="font-size:16px;font-weight:700;color:'+groupNameColor+';text-align:center;">🧤 '+homeNickname(formatPrenom(goals[0].prenom))+'</div>'
         + '<div style="'+redStyle+'text-align:center;">Besoin d\'un gardien</div>'
         + (comp1 ? '<div style="'+subStyle+'text-align:center;">'+comp1+'</div>' : '');
     } else {
@@ -1264,7 +1264,7 @@ function renderHome() {
           + '<div style="font-size:15px;font-weight:800;letter-spacing:0.5px;color:'+groupNameColor+';">GROUPE COMPLET</div>'
           + '<div style="font-size:13px;font-weight:800;color:'+groupNameColor+';margin-top:2px;">Tirage à venir</div>'
         + '</div>'
-        + (champs.length ? '<div style="margin-bottom:16px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;text-align:center;">Joueurs</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 0px;font-size:13px;font-weight:700;color:'+groupNameColor+';line-height:1.4;max-width:220px;margin:0 auto;">'+champsHTML+'</div></div>' : '')
+        + (champs.length ? '<div style="margin-bottom:16px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;text-align:center;">Joueurs</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 0px;font-size:16px;font-weight:700;color:'+groupNameColor+';line-height:1.4;max-width:260px;margin:0 auto;">'+champsHTML+'</div></div>' : '')
         + '<div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text3);margin-bottom:4px;text-align:center;">Gardiens</div>'+goalsHTML+'</div>'
       + '</div>';
 
