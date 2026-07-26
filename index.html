@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.260726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2193,8 +2193,12 @@ function renderAdminPanel() {
 
   adminLoadSchedule();
 
-  db.ref('connectedPlayers').once('value').then(function(snap) {
-    var connected = snap.val() || {};
+  Promise.all([
+    db.ref('connectedPlayers').once('value'),
+    db.ref('fcmTokens').once('value')
+  ]).then(function(results) {
+    var connected = results[0].val() || {};
+    var tokens = results[1].val() || {};
     var roster = PIN_PLAYERS.filter(function(p){ return p.id !== 0 && !p.isVisitor; });
     var nbConnected = roster.filter(function(p){ return connected[p.id]; }).length;
     var countEl = document.getElementById('admin-connected-count');
@@ -2207,8 +2211,12 @@ function renderAdminPanel() {
         var timeStr = ts ? ts.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : null;
         var label = ts ? (dateStr + ' à ' + timeStr) : 'Jamais connecté';
         var color = ts ? 'var(--text2)' : 'var(--text3)';
+        var hasToken = !!tokens[p.id];
+        var notifBadge = hasToken
+          ? '<span title="Notifications actives" style="color:var(--green);font-size:13px;">🔔</span>'
+          : '<span title="Notifications inactives" style="color:var(--text3);font-size:13px;">🔕</span>';
         return '<div class="toggle-row"><div class="tgl-lbl">' + formatName(p.prenom, p.nom) + '</div>' +
-               '<span style="color:' + color + ';font-size:11px;font-weight:500;text-align:right;">' + label + '</span></div>';
+               '<span style="display:flex;align-items:center;gap:6px;color:' + color + ';font-size:11px;font-weight:500;text-align:right;">' + notifBadge + label + '</span></div>';
       }).join('');
     }
   });
@@ -2947,6 +2955,29 @@ function disableNotifications() {
   });
 }
 
+// Rafraîchit silencieusement le token FCM à chaque ouverture de l'appli (si
+// la permission est déjà accordée), même si un token existe déjà en base —
+// il a pu devenir invalide sans que personne ne s'en aperçoive (mise à jour
+// du service worker, etc.). Aucune popup, aucun message : ça se répare tout
+// seul en arrière-plan.
+function silentlyRefreshToken() {
+  if (!currentUser || currentUser.id === 0) return;
+  if (!('serviceWorker' in navigator) || typeof firebase === 'undefined' || !firebase.messaging) return;
+  if (!firebase.messaging.isSupported || !firebase.messaging.isSupported()) return;
+  navigator.serviceWorker.ready.then(function(registration) {
+    var messaging = firebase.messaging();
+    messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: registration }).then(function(token) {
+      if (!token) return;
+      db.ref('fcmTokens/' + currentUser.id).once('value').then(function(snap) {
+        if (snap.val() !== token) {
+          db.ref('fcmTokens/' + currentUser.id).set(token);
+          console.log('Token FCM rafraîchi silencieusement.');
+        }
+      });
+    }).catch(function(err) { console.error('Erreur rafraîchissement token FCM :', err); });
+  }).catch(function(err) { console.error('Erreur service worker :', err); });
+}
+
 function enableNotifications() {
   if (!currentUser || currentUser.id === 0) return;
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {
@@ -3071,11 +3102,17 @@ function loginUser(user) {
   if (!user.isVisitor && user.id !== 0) {
     db.ref('connectedPlayers/' + user.id).set(firebase.database.ServerValue.TIMESTAMP);
     if ('Notification' in window && 'serviceWorker' in navigator && Notification.permission !== 'denied') {
-      db.ref('fcmTokens/' + user.id).once('value').then(function(snap) {
-        if (!snap.exists() || !snap.val()) {
-          enableNotifications();
-        }
-      });
+      if (Notification.permission === 'granted') {
+        // Permission déjà accordée : on rafraîchit le token à chaque ouverture,
+        // même s'il en existe déjà un enregistré (il a pu devenir invalide).
+        silentlyRefreshToken();
+      } else {
+        db.ref('fcmTokens/' + user.id).once('value').then(function(snap) {
+          if (!snap.exists() || !snap.val()) {
+            enableNotifications();
+          }
+        });
+      }
     }
   }
 }
