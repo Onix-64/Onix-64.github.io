@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.6.260726';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -765,9 +765,9 @@ if (firebase.messaging && firebase.messaging.isSupported && firebase.messaging.i
       try { east = JSON.parse(data.east || '[]'); } catch (e) {}
       // Format compact sur 2 lignes : les notifications Android tronquent le
       // texte au-delà de quelques lignes, une liste "un joueur par ligne" ne tenait pas.
-      var westLine = '🌟 WEST: ' + west.join(', ') + (data.westKeeper ? ', 🧤 ' + data.westKeeper : '');
-      var eastLine = '🌟 EAST: ' + east.join(', ') + (data.eastKeeper ? ', 🧤 ' + data.eastKeeper : '');
-      var teamsBody = westLine + '\n' + eastLine;
+      var westNamesLine = west.join(', ') + (data.westKeeper ? ', 🧤 ' + data.westKeeper : '');
+      var eastNamesLine = east.join(', ') + (data.eastKeeper ? ', 🧤 ' + data.eastKeeper : '');
+      var teamsBody = '⭐⭐⭐ WEST ALL STARS ⭐⭐⭐\n' + westNamesLine + '\n⭐⭐⭐ EAST ALL STARS ⭐⭐⭐\n' + eastNamesLine;
 
       navigator.serviceWorker.ready.then(function(registration) {
         registration.showNotification(data.title || 'Équipes du mardi', {
@@ -1082,18 +1082,18 @@ function renderDrawnTeamsIfAny(matchId) {
     var checkColor = isLight ? '#15803d' : '#4ade80';
 
     document.getElementById('group-status').innerHTML =
-      '<div style="width:100%;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:12px;padding:14px 16px;">'
-        + '<div style="text-align:center;margin-bottom:16px;">'
+      '<div style="width:100%;background:'+cardBg+';border:1px solid '+cardBorder+';border-radius:12px;padding:12px 8px;">'
+        + '<div style="text-align:center;margin-bottom:14px;">'
           + '<div style="font-size:14px;font-weight:800;letter-spacing:0.5px;color:'+checkColor+';">GROUPE COMPLET</div>'
           + '<div style="font-size:13px;font-weight:800;color:'+checkColor+';margin-top:2px;">🏆 Tirage effectué 🏆</div>'
         + '</div>'
-        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
-          + '<div style="background:var(--teamWest-bg);border:0.5px solid var(--teamWest);border-radius:10px;padding:10px;text-align:center;">'
-            + '<div style="font-size:11px;font-weight:800;color:var(--teamWestStar);">★ WEST ALL STARS ★</div>'
+        + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">'
+          + '<div style="background:var(--teamWest-bg);border:0.5px solid var(--teamWest);border-radius:10px;padding:8px 4px;text-align:center;">'
+            + '<div style="font-size:11px;font-weight:800;color:var(--teamWestStar);white-space:nowrap;">★ WEST ALL STARS ★</div>'
             + '<div style="margin-top:8px;font-size:12px;font-weight:700;line-height:1.9;color:var(--teamWest);">'+westList+'</div>'
           + '</div>'
-          + '<div style="background:var(--teamEast-bg);border:0.5px solid var(--teamEast);border-radius:10px;padding:10px;text-align:center;">'
-            + '<div style="font-size:11px;font-weight:800;color:var(--teamEastStar);">★ EAST ALL STARS ★</div>'
+          + '<div style="background:var(--teamEast-bg);border:0.5px solid var(--teamEast);border-radius:10px;padding:8px 4px;text-align:center;">'
+            + '<div style="font-size:11px;font-weight:800;color:var(--teamEastStar);white-space:nowrap;">★ EAST ALL STARS ★</div>'
             + '<div style="margin-top:8px;font-size:12px;font-weight:700;line-height:1.9;color:var(--teamEast);">'+eastList+'</div>'
           + '</div>'
         + '</div>'
