@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.030826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1003,6 +1003,8 @@ function getNextMatch() { return planning[getNextMatchIndex()]; }
 var votes = {};
 var voteTimestamps = {};
 var votesRef = null; // référence Firebase actuellement écoutée
+var gkChoicesRef = null;
+var gkChoices = {}; // choix admin pour compenser un/des gardien(s) manquant(s), voir renderHome()
 var matchNotifiedAt = null; // null tant que la notif hebdo n'a pas été envoyée pour ce match
 var notifiedRef = null;
 
@@ -1038,6 +1040,15 @@ function listenVotes(matchId) {
     renderHome();
   }, function(err) {
     console.error('Firebase (notifiedAt) :', err);
+  });
+
+  if (gkChoicesRef) gkChoicesRef.off();
+  gkChoicesRef = db.ref('matches/' + matchId + '/gkChoices');
+  gkChoicesRef.on('value', function(snapshot) {
+    gkChoices = snapshot.val() || {};
+    renderHome();
+  }, function(err) {
+    console.error('Firebase (gkChoices) :', err);
   });
 }
 
@@ -1101,6 +1112,160 @@ function renderDrawnTeamsIfAny(matchId) {
   }).catch(function(err){
     console.error('Erreur lors de la vérification du tirage du jour :', err);
   });
+}
+
+// ══ Remplacement d'un ou deux gardiens manquants (ADMIN uniquement) ══
+// gkChoices (chargé depuis Firebase, voir listenVotes) contient les choix
+// déjà validés. gkChoiceDraft ne contient que la sélection en cours dans le
+// formulaire (pas encore validée), pour ne pas la perdre entre deux
+// rafraîchissements de l'accueil (vote qui arrive pendant la saisie, etc).
+var gkChoiceDraft = {}; // { 0: {source:'compensator'|'manual', role:'gardien'|'joueur'}, 1: {...} }
+var _gkLastCompensators = []; // dernière liste de compensateurs calculée par buildGkChoiceSection, utilisée par gkChoiceSave
+
+function buildGkChoiceSection(missingGoals, existingGoals, compensators, groupNameColor) {
+  _gkLastCompensators = compensators;
+  var isAdmin = currentUser && currentUser.isAdmin;
+  var slots = [];
+  for (var i = 0; i < missingGoals; i++) slots.push(i);
+
+  // Slots déjà résolus (visibles par tout le monde) + slots à traiter
+  var resolvedHTML = existingGoals.map(function(p){
+    return '<div>🧤 '+homeNickname(formatPrenom(p.prenom))+'</div>';
+  });
+  var pendingSlots = [];
+
+  slots.forEach(function(slotIndex){
+    var choice = gkChoices && gkChoices[slotIndex];
+    if (choice) {
+      var label = choice.role === 'gardien' ? '🧤 ' : '⚽ ';
+      resolvedHTML.push(
+        '<div style="display:flex;align-items:center;justify-content:center;gap:6px;">'
+          + '<span>'+label+choice.name+'</span>'
+          + (isAdmin ? '<span onclick="gkChoiceReset('+slotIndex+')" style="cursor:pointer;color:var(--text3);font-size:11px;text-decoration:underline;">modifier</span>' : '')
+        + '</div>'
+      );
+    } else {
+      pendingSlots.push(slotIndex);
+    }
+  });
+
+  var html = '';
+  if (resolvedHTML.length) {
+    html += '<div style="font-size:16px;font-weight:700;color:'+groupNameColor+';text-align:center;line-height:1.8;">'+resolvedHTML.join('')+'</div>';
+  }
+
+  if (!pendingSlots.length) return html;
+
+  if (!isAdmin) {
+    // Non-admin : simple texte informatif, pas de formulaire.
+    var names = pendingSlots.map(function(i){ return compensators[i] ? homeNickname(formatPrenom(compensators[i].prenom)) : null; }).filter(Boolean);
+    html += '<div style="color:var(--red);font-weight:800;font-size:13px;text-align:center;">'
+      + (pendingSlots.length === 1 ? 'Besoin d\'un gardien' : 'Besoin de '+pendingSlots.length+' gardiens') + '</div>'
+      + (names.length ? '<div style="color:var(--text2);font-size:12px;font-style:italic;text-align:center;margin-top:3px;">En attente du choix de l\'admin</div>' : '');
+    return html;
+  }
+
+  // Formulaire admin : un bloc par slot manquant.
+  html += '<div style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:10px;padding:12px;margin-top:10px;text-align:left;">'
+    + '<div style="font-size:13px;font-weight:800;color:var(--text);text-align:center;margin-bottom:10px;">'
+      + (missingGoals === 2 ? 'Choix des gardiens manquants' : 'Choix du gardien manquant')
+    + '</div>';
+
+  pendingSlots.forEach(function(slotIndex){
+    var comp = compensators[slotIndex];
+    var draft = gkChoiceDraft[slotIndex] || (gkChoiceDraft[slotIndex] = { source: comp ? 'compensator' : 'manual', role: 'gardien' });
+    var isManual = draft.source === 'manual';
+    var isJoueur = draft.role === 'joueur';
+    var compLabel = comp ? homeNickname(formatPrenom(comp.prenom)) + ' (' + (8 + slotIndex + 1) + 'e réponse)' : null;
+
+    html += (missingGoals === 2 ? '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Gardien remplaçant n°'+(slotIndex+1)+'</div>' : '')
+      + '<div style="margin-bottom:14px;">';
+
+    if (compLabel) {
+      html += '<div onclick="gkChoiceSelectSource('+slotIndex+',\'compensator\')" style="cursor:pointer;padding:8px 0;border-bottom:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;">'
+        + '<span style="font-size:13px;color:var(--text);">'+compLabel+'</span>'
+        + '<button class="toggle'+(!isManual?' on':'')+'" style="pointer-events:none;"></button>'
+      + '</div>';
+    }
+    html += '<div onclick="gkChoiceSelectSource('+slotIndex+',\'manual\')" style="cursor:pointer;padding:8px 0;display:flex;justify-content:space-between;align-items:center;">'
+      + '<span style="font-size:13px;color:var(--text);">Autre joueur</span>'
+      + '<button class="toggle'+(isManual?' on':'')+'" style="pointer-events:none;"></button>'
+    + '</div>';
+
+    if (isManual) {
+      html += '<input type="text" id="gk-name-'+slotIndex+'" placeholder="Prénom du remplaçant" style="width:100%;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;margin-top:8px;">'
+        + '<div style="display:flex;gap:8px;margin-top:8px;">'
+          + '<button onclick="gkChoiceSelectRole('+slotIndex+',\'gardien\')" style="flex:1;padding:8px;border-radius:var(--r-sm);border:0.5px solid var(--border2);background:'+(!isJoueur?'var(--gold)':'var(--bg)')+';color:'+(!isJoueur?'var(--bg)':'var(--text)')+';font-weight:700;font-size:12px;cursor:pointer;">Gardien</button>'
+          + '<button onclick="gkChoiceSelectRole('+slotIndex+',\'joueur\')" style="flex:1;padding:8px;border-radius:var(--r-sm);border:0.5px solid var(--border2);background:'+(isJoueur?'var(--gold)':'var(--bg)')+';color:'+(isJoueur?'var(--bg)':'var(--text)')+';font-weight:700;font-size:12px;cursor:pointer;">Joueur</button>'
+        + '</div>';
+      if (!isJoueur) {
+        html += '<div style="margin-top:8px;"><label style="font-size:11px;color:var(--text3);">Note gardien</label>'
+          + '<input type="number" id="gk-niveau-'+slotIndex+'" min="1" max="5" value="3" style="width:100%;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px 10px;color:var(--text);font-family:inherit;"></div>';
+      } else {
+        html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">'
+          + ['marque','defend','endur','vivac'].map(function(stat){
+              var labels = {marque:'Marque',defend:'Défense',endur:'Endurance',vivac:'Vivacité'};
+              return '<div><label style="font-size:11px;color:var(--text3);">'+labels[stat]+'</label><input type="number" id="gk-'+stat+'-'+slotIndex+'" min="1" max="5" value="3" style="width:100%;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--r-sm);padding:6px 10px;color:var(--text);font-family:inherit;"></div>';
+            }).join('')
+        + '</div>';
+      }
+    }
+
+    html += '<button onclick="gkChoiceSave('+slotIndex+')" style="width:100%;margin-top:10px;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-sm);padding:9px;font-weight:800;font-size:12px;cursor:pointer;">Valider</button>'
+    + '</div>';
+  });
+
+  html += '</div>';
+  return html;
+}
+
+function gkChoiceSelectSource(slotIndex, source) {
+  if (!gkChoiceDraft[slotIndex]) gkChoiceDraft[slotIndex] = { role: 'gardien' };
+  gkChoiceDraft[slotIndex].source = source;
+  renderHome();
+}
+function gkChoiceSelectRole(slotIndex, role) {
+  if (!gkChoiceDraft[slotIndex]) gkChoiceDraft[slotIndex] = { source: 'manual' };
+  gkChoiceDraft[slotIndex].role = role;
+  renderHome();
+}
+
+function gkChoiceSave(slotIndex) {
+  if (!currentUser || !currentUser.isAdmin) return;
+  var draft = gkChoiceDraft[slotIndex] || { source: 'manual', role: 'gardien' };
+  var matchId = getMatchId(getNextMatch());
+  var choice;
+
+  if (draft.source === 'compensator') {
+    var comp = _gkLastCompensators && _gkLastCompensators[slotIndex];
+    if (!comp) { alert('Ce joueur n\'est plus disponible, recharge la page.'); return; }
+    choice = { source: 'compensator', playerId: comp.id, name: homeNickname(formatPrenom(comp.prenom)), role: 'gardien', niveau: 3 };
+  } else {
+    var nameInput = document.getElementById('gk-name-'+slotIndex);
+    var name = nameInput ? nameInput.value.trim() : '';
+    if (!name) { alert('Indique le prénom du remplaçant.'); return; }
+    var role = (gkChoiceDraft[slotIndex] && gkChoiceDraft[slotIndex].role) || 'gardien';
+    if (role === 'gardien') {
+      var niveauEl = document.getElementById('gk-niveau-'+slotIndex);
+      choice = { source: 'manual', name: name, role: 'gardien', niveau: niveauEl ? parseInt(niveauEl.value)||3 : 3 };
+    } else {
+      function val(id){ var el = document.getElementById(id); return el ? (parseInt(el.value)||3) : 3; }
+      choice = { source: 'manual', name: name, role: 'joueur',
+        marque: val('gk-marque-'+slotIndex), defend: val('gk-defend-'+slotIndex),
+        endur: val('gk-endur-'+slotIndex), vivac: val('gk-vivac-'+slotIndex) };
+    }
+  }
+
+  db.ref('matches/' + matchId + '/gkChoices/' + slotIndex).set(choice).then(function(){
+    delete gkChoiceDraft[slotIndex];
+  }).catch(function(err){ alert('Erreur : ' + (err && err.message || err)); });
+}
+
+function gkChoiceReset(slotIndex) {
+  if (!currentUser || !currentUser.isAdmin) return;
+  if (!confirm('Revenir sur ce choix de gardien remplaçant ?')) return;
+  var matchId = getMatchId(getNextMatch());
+  db.ref('matches/' + matchId + '/gkChoices/' + slotIndex).remove();
 }
 
 function renderHome() {
@@ -1248,6 +1413,11 @@ function renderHome() {
         + '<div style="text-align:right;padding-right:8px;">🧤 '+homeNickname(formatPrenom(goals[0].prenom))+'</div>'
         + '<div style="text-align:left;padding-left:8px;">🧤 '+homeNickname(formatPrenom(goals[1].prenom))+'</div>'
       + '</div>';
+    } else if (missingGoals > 0 && C.wait === 0) {
+      // Tout le monde a voté et il manque 1 ou 2 gardiens : soit le(s) choix
+      // déjà fait(s) par l'admin (visible par tous), soit le sélecteur
+      // (visible et modifiable par l'admin seulement).
+      goalsHTML = buildGkChoiceSection(missingGoals, goals, allAvailableFields, groupNameColor);
     } else if (goals.length === 1) {
       var comp1 = allAvailableFields[0] ? 'Sinon <strong>'+homeNickname(formatPrenom(allAvailableFields[0].prenom))+'</strong> fera le 10e' : '';
       goalsHTML = '<div style="font-size:16px;font-weight:700;color:'+groupNameColor+';text-align:center;">🧤 '+homeNickname(formatPrenom(goals[0].prenom))+'</div>'
