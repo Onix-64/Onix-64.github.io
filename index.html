@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.060826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1157,11 +1157,18 @@ function buildGkChoiceSection(missingGoals, existingGoals, compensators, groupNa
   if (!pendingSlots.length) return html;
 
   if (!isAdmin) {
-    // Non-admin : simple texte informatif, pas de formulaire.
+    // Non-admin : on garde le message d'origine (utile à tout le monde, y
+    // compris au compensateur potentiel lui-même), pas de formulaire.
     var names = pendingSlots.map(function(i){ return compensators[i] ? homeNickname(formatPrenom(compensators[i].prenom)) : null; }).filter(Boolean);
+    var compText = '';
+    if (names.length === 1) {
+      compText = 'Sinon <strong>'+names[0]+'</strong> fera le '+(pendingSlots.length===1 ? '10e' : '9e');
+    } else if (names.length === 2) {
+      compText = 'Sinon <strong>'+names[0]+'</strong> et <strong>'+names[1]+'</strong> complèteront le groupe';
+    }
     html += '<div style="color:var(--red);font-weight:800;font-size:13px;text-align:center;">'
       + (pendingSlots.length === 1 ? 'Besoin d\'un gardien' : 'Besoin de '+pendingSlots.length+' gardiens') + '</div>'
-      + (names.length ? '<div style="color:var(--text2);font-size:12px;font-style:italic;text-align:center;margin-top:3px;">En attente du choix de l\'admin</div>' : '');
+      + (compText ? '<div style="color:var(--text2);font-size:12px;font-style:italic;text-align:center;margin-top:3px;">'+compText+'</div>' : '');
     return html;
   }
 
