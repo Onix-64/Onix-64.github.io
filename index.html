@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.200826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2467,7 +2467,7 @@ function adminTriggerRemind() {
   var dateLabel = m0.date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
   if (!confirm('Envoyer un rappel aux joueurs qui n\'ont pas encore voté pour le match du ' + dateLabel + ' ?')) return;
   // Ouvre GitHub Actions pour déclencher les push manuellement
-  window.open('https://github.com/Onix-64/foot-mardi-notify-/actions/workflows/remind.yml', '_blank');
+  window.open('https://github.com/Onix-64/foot-mardi-notify-/actions/workflows/complete.yml', '_blank');
 }
 
 function adminSaveSchedule() {
