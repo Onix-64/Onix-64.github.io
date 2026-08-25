@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.250826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1945,8 +1945,10 @@ function computeMatchsJoues(playerId, callback) {
   db.ref('matches').once('value').then(function(snap) {
     var allMatches = snap.val() || {};
     var today = new Date(); today.setHours(0,0,0,0);
+    var seasonStart = '2026-09-01'; // Les matchs de test de l'été (juillet-août) ne comptent pas.
     var count = 0;
     Object.keys(allMatches).forEach(function(matchId) {
+      if (matchId < seasonStart) return;
       var d = new Date(matchId + 'T00:00:00');
       if (isNaN(d.getTime()) || d >= today) return;
       var votesData = (allMatches[matchId] && allMatches[matchId].votes) || {};
