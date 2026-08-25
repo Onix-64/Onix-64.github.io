@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.230826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -909,13 +909,6 @@ setInterval(function() {
 var FIXED_PLANNING = {
   // Mardis d'été à blanc, pour tester le vote et les notifications avant la saison.
   // Joueurs tirés au hasard, marqués "test: true" pour l'étiquette d'avertissement.
-  '2026-07-14': { players: [3,4,5,6,7,8,12,13],    goalkeepers: [15,16], test: true },
-  '2026-07-21': { players: [1,3,4,5,7,8,9,12],     goalkeepers: [15,16], test: true },
-  '2026-07-28': { players: [1,2,4,5,6,10,11,18],   goalkeepers: [15,16], test: true },
-  '2026-08-04': { players: [1,3,4,6,7,11,13,18],   goalkeepers: [15,16], test: true },
-  '2026-08-11': { players: [1,2,6,7,10,12,14,18],  goalkeepers: [15,16], test: true },
-  '2026-08-18': { players: [1,2,4,6,7,9,13,18],    goalkeepers: [15,16], test: true },
-  '2026-08-25': { players: [3,4,5,6,7,8,9,13],     goalkeepers: [15,16], test: true },
   '2026-09-01': { players: [1,2,4,6,8,9,12,13],   goalkeepers: [15,16] },
   '2026-09-08': { players: [3,4,5,6,7,8,12,14],   goalkeepers: [15,16] },
   '2026-09-15': { players: [1,2,3,7,9,11,13,18],   goalkeepers: [15,16] },
