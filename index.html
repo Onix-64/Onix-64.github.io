@@ -724,7 +724,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.3.250826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2909,15 +2909,21 @@ function validerEquipes() {
     btn.style.opacity = '0.5';
   }
   var cfg = eqResults[eqResultIndex];
+  var matchId = getMatchId(getNextMatch());
   var entry = {
     date: new Date().toISOString(),
     teamA: { players: cfg.teamA.map(function(p){return p.id;}), keeper: cfg.kA?cfg.kA.id:null },
     teamB: { players: cfg.teamB.map(function(p){return p.id;}), keeper: cfg.kB?cfg.kB.id:null },
     scoreA: null,
-    scoreB: null
+    scoreB: null,
+    matchId: matchId
   };
   var key = 'match_' + Date.now();
   db.ref('equipesHistory/'+key).set(entry).then(function(){
+    // On prévient le bot automatique qu'un tirage existe déjà pour ce match
+    // (sans le marquer "auto" — la surveillance du bot ne touchera donc
+    // jamais à une composition faite à la main).
+    db.ref('matches/' + matchId + '/autoDrawnAt').set(firebase.database.ServerValue.TIMESTAMP);
     entry._key = key;
     eqHistory.push(entry);
     renderEqHistory();
@@ -3027,9 +3033,17 @@ function updateEqHistoryGuestName(key, value) {
 function deleteEqHistoryMatch(key) {
   if (!key) return;
   if (!confirm('Supprimer ce match de l\'historique ?')) return;
+  var entry = eqHistory.find(function(m){ return m._key === key; });
   db.ref('equipesHistory/'+key).remove().then(function(){
     eqHistory = eqHistory.filter(function(m){ return m._key !== key; });
     renderEqHistory();
+    // On efface aussi le marqueur "tirage effectué" de ce match, sinon le
+    // bot automatique resterait bloqué à croire qu'un tirage existe déjà
+    // sans jamais retrouver d'entrée correspondante — remet le compteur à
+    // zéro pour que l'appli puisse reprendre la main normalement.
+    if (entry && entry.matchId) {
+      db.ref('matches/' + entry.matchId + '/autoDrawnAt').remove();
+    }
   }).catch(function(err){ alert('Erreur : ' + (err && err.message || err)); });
 }
 
