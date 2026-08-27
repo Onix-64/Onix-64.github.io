@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.270826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2890,11 +2890,20 @@ function renderEqResult(cfg) {
   function teamBlock(containerId, players, keeper, colorVar) {
     var el = document.getElementById(containerId);
     if (!el) return;
+    var s = eqStatSums(players);
+    var n = players.length || 1;
+    function avg(v){ return (v/n).toFixed(1); }
     el.innerHTML = (keeper ? '<div style="font-size:11px;color:'+colorVar+';margin-bottom:6px;font-weight:700;text-align:center;">🥅 '+keeper.name+'</div>' : '<div style="font-size:11px;color:var(--text3);margin-bottom:6px;text-align:center;">Sans gardien dédié</div>')
       + players.map(function(p){
           return '<div style="font-size:12px;font-weight:700;text-align:center;padding:3px 0;border-bottom:0.5px solid var(--border);color:var(--text);">'+p.name+'</div>';
         }).join('')
-      + '<div style="font-size:10px;font-weight:400;color:var(--text3);text-align:center;margin-top:6px;">Note: '+eqStatSums(players).note+'</div>';
+      + '<div style="font-size:10px;font-weight:400;color:var(--text3);text-align:center;margin-top:6px;">Note: '+eqStatSums(players).note+'</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);font-size:10px;color:'+colorVar+';">'
+        + '<div>⚽ Attaque : <strong>'+avg(s.marque)+'</strong></div>'
+        + '<div>🛡️ Défense : <strong>'+avg(s.defend)+'</strong></div>'
+        + '<div>🏃 Endurance : <strong>'+avg(s.endur)+'</strong></div>'
+        + '<div>⚡ Vivacité : <strong>'+avg(s.vivac)+'</strong></div>'
+      + '</div>';
   }
 
   teamBlock('eq-team-a', cfg.teamA, cfg.kA, 'var(--teamWest)');
@@ -3091,6 +3100,18 @@ function renderEqHistory() {
     return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+content+'</div>';
   }
 
+  function fieldStatsAvg(ids) {
+    var players = ids.map(function(id){ return eqRoster.field.find(function(p){ return p.id===id; }); }).filter(Boolean);
+    var n = players.length || 1;
+    var s = eqStatSums(players);
+    return { marque:(s.marque/n).toFixed(1), defend:(s.defend/n).toFixed(1), endur:(s.endur/n).toFixed(1), vivac:(s.vivac/n).toFixed(1) };
+  }
+  function statsRowHtml(stats, colorVar, align) {
+    return '<div style="font-size:9px;color:'+colorVar+';margin-top:6px;line-height:1.6;text-align:'+align+';">'
+      + '⚽ '+stats.marque+' &nbsp; 🛡️ '+stats.defend+'<br>🏃 '+stats.endur+' &nbsp; ⚡ '+stats.vivac
+    + '</div>';
+  }
+
   list.innerHTML = eqHistory.slice().reverse().map(function(m, i){
     var key = m._key || '';
     var d = new Date(m.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'2-digit'});
@@ -3098,6 +3119,8 @@ function renderEqHistory() {
       .concat(m.teamA.keeper ? [{id:m.teamA.keeper, keeper:true}] : []);
     var bItems = m.teamB.players.map(function(id){ return {id:id, keeper:false}; })
       .concat(m.teamB.keeper ? [{id:m.teamB.keeper, keeper:true}] : []);
+    var statsA = fieldStatsAvg(m.teamA.players);
+    var statsB = fieldStatsAvg(m.teamB.players);
     var scoreAVal = (typeof m.scoreA === 'number') ? m.scoreA : '';
     var scoreBVal = (typeof m.scoreB === 'number') ? m.scoreB : '';
     var scoreInputStyle = 'width:26px;flex-shrink:0;text-align:center;font-size:14px;font-weight:900;color:var(--gold);background:var(--bg3);border:0.5px solid var(--border2);border-radius:6px;padding:2px 0;font-family:inherit;';
@@ -3120,6 +3143,11 @@ function renderEqHistory() {
         + '<div style="text-align:right;">' + aItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName, 'right'); }).join('') + '</div>'
         + '<div></div>'
         + '<div style="text-align:left;">' + bItems.map(function(item){ return playerLineHtml(item.id, item.keeper, key, m.guestName, 'left'); }).join('') + '</div>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:1fr 72px 1fr;gap:6px;">'
+        + '<div>' + statsRowHtml(statsA, 'var(--teamWest)', 'right') + '</div>'
+        + '<div></div>'
+        + '<div>' + statsRowHtml(statsB, 'var(--teamEast)', 'left') + '</div>'
       + '</div>'
       + '</div>';
   }).join('');
