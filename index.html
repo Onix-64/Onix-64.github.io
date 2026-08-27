@@ -426,8 +426,12 @@
       <div id="eq-select-warn" style="padding:4px 16px 12px;font-size:12px;color:var(--red);"></div>
     </div>
 
-    <!-- BOUTON GÉNÉRER -->
-    <button onclick="genEquipes()" id="eq-generate-btn" disabled style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:14px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:14px;opacity:0.5;">⚽ Générer les équipes</button>
+    <!-- BOUTONS GÉNÉRER -->
+    <button onclick="genEquipes()" id="eq-generate-btn" disabled style="width:100%;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:14px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px;opacity:0.5;">⚽ Générer les équipes automatiquement</button>
+    <button onclick="openManualEqBuilder()" id="eq-manual-btn" disabled style="width:100%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text);border-radius:var(--r-md);padding:14px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:14px;opacity:0.5;">🖐 Générer les équipes manuellement</button>
+
+    <!-- CONSTRUCTEUR MANUEL -->
+    <div id="eq-manual-wrap" style="display:none;margin-bottom:14px;"></div>
 
     <!-- RÉSULTAT -->
     <div id="eq-result-wrap" style="display:none;margin-bottom:14px;">
@@ -724,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.260826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2604,6 +2608,7 @@ var eqSelectedField = new Set();
 var eqSelectedKeepers = new Set();
 var eqResults = [];
 var eqResultIndex = 0;
+var eqManualAssign = {}; // { playerId: 'A' | 'B' }
 var eqSortCol = null; // colonne de tri actuelle
 
 function sortEqRoster(col) {
@@ -2629,12 +2634,16 @@ function initEqRosterFromPlayers() {
   var fields = PLAYERS.filter(function(p){ return p.role==='joueur'; }).map(function(p){
     return { id: String(p.id), name: formatName(p.prenom, p.nom), marque:3, defend:3, endur:3, vivac:3 };
   });
-  // Joueur extérieur "de secours" : utilisable très occasionnellement quand le groupe
-  // n'atteint pas 8 joueurs de champ. Notes par défaut à 3, modifiables comme les autres.
-  fields.push({ id: 'ext', name: 'Joueur extérieur', marque:3, defend:3, endur:3, vivac:3 });
+  // Jokers "de secours" : utilisables très occasionnellement quand le groupe
+  // n'atteint pas 8 joueurs de champ / 2 gardiens. Notes par défaut à 3,
+  // modifiables comme les autres dans "Niveaux des joueurs".
+  fields.push({ id: 'joker1', name: 'Joueur joker 1', marque:3, defend:3, endur:3, vivac:3 });
+  fields.push({ id: 'joker2', name: 'Joueur joker 2', marque:3, defend:3, endur:3, vivac:3 });
   var keepers = PLAYERS.filter(function(p){ return p.role==='gardien'; }).map(function(p){
     return { id: String(p.id), name: formatName(p.prenom, p.nom), niveau:3 };
   });
+  keepers.push({ id: 'gkjoker1', name: 'Gardien joker 1', niveau:3 });
+  keepers.push({ id: 'gkjoker2', name: 'Gardien joker 2', niveau:3 });
   return { field: fields, keepers: keepers };
 }
 
@@ -2645,6 +2654,9 @@ function loadEquipesData() {
   db.ref('equipesRoster').once('value').then(function(snap){
     var saved = snap.val();
     if (saved && saved.field && saved.field.length) {
+      // Nettoyage : l'ancien slot unique "Joueur extérieur" (id 'ext') est
+      // remplacé par les 4 jokers nommés — on l'enlève s'il traîne encore.
+      saved.field = saved.field.filter(function(p){ return p.id !== 'ext'; });
       // Fusionner : garder les stats sauvegardées, ajouter les nouveaux joueurs manquants
       base.field.forEach(function(bp){
         var existing = saved.field.find(function(p){ return p.id === bp.id; });
@@ -2739,7 +2751,7 @@ function renderEqFieldList() {
   wrap.innerHTML = eqRoster.field.map(function(p){
     var checked = eqSelectedField.has(p.id);
     var disabled = !checked && eqSelectedField.size >= 8;
-    var isExt = p.id === 'ext';
+    var isExt = p.id === 'joker1' || p.id === 'joker2';
     return '<div class="fiche-field" data-eq-pid="'+p.id+'" onclick="eqToggleField(\''+p.id+'\')" '
       + 'style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--border);cursor:'+(disabled?'not-allowed':'pointer')+';opacity:'+(disabled?0.4:1)+(isExt?';border-top:0.5px dashed var(--gold);':'')+'">'
       + '<div style="width:18px;height:18px;border:1.5px solid '+(checked?'var(--green)':'var(--border2)')+';border-radius:4px;background:'+(checked?'var(--green)':'transparent')+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
@@ -2767,7 +2779,8 @@ function renderEqGkPicks() {
     + '<div style="display:flex;gap:8px;">'
     + eqRoster.keepers.map(function(k){
         var checked = eqSelectedKeepers.has(k.id);
-        return '<div onclick="eqToggleGk(\''+k.id+'\')" style="flex:1;text-align:center;padding:10px;border:1.5px solid '+(checked?'var(--gold)':'var(--border2)')+';border-radius:var(--r-md);cursor:pointer;font-size:13px;font-weight:700;background:'+(checked?'var(--gold-bg)':'transparent')+';color:'+(checked?'var(--gold)':'var(--text2)')+';">'+k.name+'</div>';
+        var isJoker = k.id === 'gkjoker1' || k.id === 'gkjoker2';
+        return '<div onclick="eqToggleGk(\''+k.id+'\')" style="flex:1;text-align:center;padding:10px;border:1.5px '+(isJoker?'dashed':'solid')+' '+(checked?'var(--gold)':'var(--border2)')+';border-radius:var(--r-md);cursor:pointer;font-size:13px;font-weight:700;background:'+(checked?'var(--gold-bg)':'transparent')+';color:'+(checked?'var(--gold)':'var(--text2)')+';'+(isJoker&&!checked?'font-style:italic;':'')+'">'+(isJoker?'🆘 ':'')+k.name+'</div>';
       }).join('')
     + '</div>';
 }
@@ -2781,11 +2794,13 @@ function eqToggleGk(id) {
 
 function updateEqGenerateState() {
   var btn = document.getElementById('eq-generate-btn');
+  var manualBtn = document.getElementById('eq-manual-btn');
   var warn = document.getElementById('eq-select-warn');
   if (!btn) return;
   var ok = eqSelectedField.size === 8 && eqSelectedKeepers.size >= 1;
   btn.disabled = !ok;
   btn.style.opacity = ok ? '1' : '0.5';
+  if (manualBtn) { manualBtn.disabled = !ok; manualBtn.style.opacity = ok ? '1' : '0.5'; }
   if (warn) {
     if (ok) { warn.textContent = eqSelectedKeepers.size===1 ? '⚠️ Un seul gardien : une équipe jouera sans gardien dédié.' : ''; }
     else {
@@ -2889,9 +2904,97 @@ function renderEqResult(cfg) {
 }
 
 function genEquipes() {
+  closeManualEqBuilder();
   eqResults = generateEqCandidates();
   eqResultIndex = 0;
   if (eqResults.length) renderEqResult(eqResults[0]);
+}
+
+// ══ Constructeur manuel des équipes (choix joueur par joueur, coeffs en direct) ══
+function openManualEqBuilder() {
+  eqManualAssign = {};
+  document.getElementById('eq-manual-wrap').style.display = 'block';
+  document.getElementById('eq-result-wrap').style.display = 'none';
+  renderManualEqBuilder();
+}
+
+function closeManualEqBuilder() {
+  document.getElementById('eq-manual-wrap').style.display = 'none';
+}
+
+function eqManualSetSide(id, side) {
+  eqManualAssign[id] = (eqManualAssign[id] === side) ? null : side;
+  renderManualEqBuilder();
+}
+
+function eqManualCoeffs() {
+  var fieldPlayers = eqRoster.field.filter(function(p){ return eqSelectedField.has(p.id); });
+  var keepers = eqRoster.keepers.filter(function(k){ return eqSelectedKeepers.has(k.id); });
+  var tA = fieldPlayers.filter(function(p){ return eqManualAssign[p.id]==='A'; });
+  var tB = fieldPlayers.filter(function(p){ return eqManualAssign[p.id]==='B'; });
+  var kA = keepers.find(function(k){ return eqManualAssign[k.id]==='A'; }) || null;
+  var kB = keepers.find(function(k){ return eqManualAssign[k.id]==='B'; }) || null;
+  var sA = eqStatSums(tA), sB = eqStatSums(tB);
+  var coOcc = buildEqCoOccurrence();
+  function repeatCost(ids){ var c=0; for(var i=0;i<ids.length;i++) for(var j=i+1;j<ids.length;j++){ var k=[ids[i],ids[j]].sort().join('|'); c+=coOcc.pair[k]||0; } return c; }
+  function gkCost(ids,kid){ if(!kid) return 0; var c=0; ids.forEach(function(id){ c+=coOcc.gk[id+'|'+kid]||0; }); return c; }
+  var sc = Math.abs(sA.marque-sB.marque)+Math.abs(sA.defend-sB.defend)+Math.abs(sA.endur-sB.endur)+Math.abs(sA.vivac-sB.vivac);
+  var nc = Math.abs(sA.note-sB.note)*0.5;
+  var kc = (kA&&kB) ? Math.abs(kA.niveau-kB.niveau) : (keepers.length>=2 ? 2 : 0);
+  var idsA=tA.map(function(p){return p.id;}), idsB=tB.map(function(p){return p.id;});
+  var rc=(repeatCost(idsA)+repeatCost(idsB))*3;
+  var gc=(gkCost(idsA,kA?kA.id:null)+gkCost(idsB,kB?kB.id:null))*2;
+  return { fieldPlayers:fieldPlayers, keepers:keepers, tA:tA, tB:tB, kA:kA, kB:kB, sA:sA, sB:sB, cost: sc+nc+kc+rc+gc };
+}
+
+function renderManualEqBuilder() {
+  var wrap = document.getElementById('eq-manual-wrap');
+  if (!wrap) return;
+  var c = eqManualCoeffs();
+  var needKeepers = c.keepers.length;
+
+  function pickRow(p, isKeeper) {
+    var side = eqManualAssign[p.id];
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">'
+      + '<div style="flex:1;font-size:13px;font-weight:600;'+(isKeeper?'':'')+'">'+(isKeeper?'🧤 ':'')+p.name+'</div>'
+      + '<button onclick="eqManualSetSide(\''+p.id+'\',\'A\')" style="padding:6px 10px;border-radius:var(--r-sm);border:0.5px solid var(--teamWest);background:'+(side==='A'?'var(--teamWest-bg)':'transparent')+';color:var(--teamWest);font-weight:800;font-size:11px;cursor:pointer;">WEST</button>'
+      + '<button onclick="eqManualSetSide(\''+p.id+'\',\'B\')" style="padding:6px 10px;border-radius:var(--r-sm);border:0.5px solid var(--teamEast);background:'+(side==='B'?'var(--teamEast-bg)':'transparent')+';color:var(--teamEast);font-weight:800;font-size:11px;cursor:pointer;">EAST</button>'
+      + '</div>';
+  }
+
+  var html = '<div style="background:var(--bg3);border:0.5px solid var(--border2);border-radius:var(--r-md);padding:14px;">'
+    + '<div style="font-size:13px;font-weight:800;text-align:center;margin-bottom:10px;">🖐 Répartition manuelle</div>'
+    + '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Joueurs de champ ('+c.tA.length+' West / '+c.tB.length+' East)</div>'
+    + c.fieldPlayers.map(function(p){ return pickRow(p, false); }).join('')
+    + (needKeepers ? '<div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin:10px 0 4px;">Gardiens</div>' + c.keepers.map(function(k){ return pickRow(k, true); }).join('') : '')
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">'
+      + '<div style="background:var(--teamWest-bg);border-radius:var(--r-sm);padding:8px;text-align:center;">'
+        + '<div style="font-size:10px;font-weight:800;color:var(--teamWest);">WEST</div>'
+        + '<div style="font-size:11px;color:var(--teamWest);margin-top:2px;">Note : '+c.sA.note+'</div>'
+      + '</div>'
+      + '<div style="background:var(--teamEast-bg);border-radius:var(--r-sm);padding:8px;text-align:center;">'
+        + '<div style="font-size:10px;font-weight:800;color:var(--teamEast);">EAST</div>'
+        + '<div style="font-size:11px;color:var(--teamEast);margin-top:2px;">Note : '+c.sB.note+'</div>'
+      + '</div>'
+    + '</div>'
+    + '<div style="text-align:center;font-size:12px;color:var(--text2);margin-top:10px;">Coefficient d\'écart : <strong style="color:var(--gold);">'+c.cost.toFixed(1)+'</strong> — plus c\'est bas, plus c\'est équilibré</div>';
+
+  var ready = c.tA.length === 4 && c.tB.length === 4 && (needKeepers === 0 || (needKeepers === 1 ? (c.kA||c.kB) : (c.kA && c.kB)));
+  html += '<button onclick="confirmManualEq()" '+(ready?'':'disabled')+' style="width:100%;margin-top:12px;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-md);padding:12px;font-weight:800;font-size:13px;cursor:pointer;opacity:'+(ready?'1':'0.5')+';">Valider cette répartition</button>'
+  + (ready ? '' : '<div style="text-align:center;font-size:11px;color:var(--text3);margin-top:6px;">4 joueurs de champ de chaque côté'+(needKeepers?' + gardien(s) assigné(s)':'')+' nécessaires</div>')
+  + '</div>';
+
+  wrap.innerHTML = html;
+}
+
+function confirmManualEq() {
+  var c = eqManualCoeffs();
+  if (c.tA.length !== 4 || c.tB.length !== 4) return;
+  var cfg = { teamA: c.tA, teamB: c.tB, kA: c.kA, kB: c.kB, cost: c.cost };
+  eqResults = [cfg];
+  eqResultIndex = 0;
+  closeManualEqBuilder();
+  renderEqResult(cfg);
 }
 
 function regenEquipes() {
