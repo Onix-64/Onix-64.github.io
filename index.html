@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.310826';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1074,8 +1074,14 @@ var HOME_NICKNAMES = { 'Christophe': 'Chris', 'Vincent': 'Mamad' };
 function homeNickname(prenom) { return HOME_NICKNAMES[prenom] || prenom; }
 
 function renderDrawnTeamsIfAny(matchId) {
-  db.ref('equipesHistory').orderByChild('matchId').equalTo(matchId).once('value').then(function(snap){
-    var val = snap.val();
+  Promise.all([
+    db.ref('equipesHistory').orderByChild('matchId').equalTo(matchId).once('value'),
+    db.ref('matches/' + matchId + '/extFieldChoices').once('value'),
+    db.ref('matches/' + matchId + '/gkChoices').once('value')
+  ]).then(function(results){
+    var val = results[0].val();
+    var extFields = results[1].val() || {};
+    var gks = results[2].val() || {};
     if (!val) return;
     var entries = Object.keys(val).map(function(k){ return val[k]; })
       .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
@@ -1084,6 +1090,14 @@ function renderDrawnTeamsIfAny(matchId) {
 
     function firstNameOf(id) {
       if (id === 'ext') return entry.guestName || 'Joueur ext.';
+      if (typeof id === 'string' && id.indexOf('extfield') === 0) {
+        var slot = id.replace('extfield', '');
+        return extFields[slot] ? homeNickname(extFields[slot].name) : id;
+      }
+      if (typeof id === 'string' && id.indexOf('gksub') === 0) {
+        var gslot = id.replace('gksub', '');
+        return gks[gslot] ? homeNickname(gks[gslot].name) : id;
+      }
       var p = PLAYERS.find(function(x){ return String(x.id) === String(id); });
       return p ? homeNickname(formatPrenom(p.prenom)) : id;
     }
