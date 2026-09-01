@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.010926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2103,6 +2103,9 @@ function openResetResults() {
       return !isNaN(d.getTime()) && d < today;
     }).sort(function(a,b){ return b.localeCompare(a); });
 
+    var seasonStart = '2026-09-01';
+    pastIds = pastIds.filter(function(matchId){ return matchId >= seasonStart; });
+
     var checkboxes = document.getElementById('reset-checkboxes');
     checkboxes.innerHTML = pastIds.map(function(matchId) {
       var d = new Date(matchId + 'T00:00:00');
@@ -2133,6 +2136,8 @@ function resetLastResult() {
       var d = new Date(matchId + 'T00:00:00');
       return !isNaN(d.getTime()) && d < today;
     }).sort(function(a,b){ return b.localeCompare(a); });
+    var seasonStart2 = '2026-09-01';
+    pastIds = pastIds.filter(function(matchId){ return matchId >= seasonStart2; });
     if (!pastIds.length) { alert('Aucun match passé.'); return; }
     var last = pastIds[0];
     var d = new Date(last + 'T00:00:00');
@@ -2183,6 +2188,9 @@ function renderResultsList() {
       var d = new Date(matchId + 'T00:00:00');
       return !isNaN(d.getTime()) && d < today;
     }).sort(function(a,b){ return b.localeCompare(a); });
+
+    var seasonStart3 = '2026-09-01';
+    pastIds = pastIds.filter(function(matchId){ return matchId >= seasonStart3; });
 
     if (!pastIds.length) {
       listEl.innerHTML = '<div class="card"><div class="tgl-sub">Aucun match passé pour le moment.</div></div>';
