@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.010926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2941,10 +2941,17 @@ function eqStatSums(players) {
   }, {marque:0,defend:0,endur:0,vivac:0,note:0});
 }
 
-function buildEqCoOccurrence() {
+function buildEqCoOccurrence(excludeMatchId) {
+  // On exclut le match en cours de l'historique pris en compte : sinon, une
+  // fois ce match validé et présent dans eqHistory, tout recalcul ultérieur
+  // (ex: tirage manuel après le tirage auto) se pénalise en se comparant à
+  // lui-même, avec le poids de récence maximal.
+  var relevantHistory = excludeMatchId
+    ? eqHistory.filter(function(m){ return m.matchId !== excludeMatchId; })
+    : eqHistory;
   var pair={}, gk={};
-  var n=eqHistory.length;
-  eqHistory.forEach(function(m,idx){
+  var n=relevantHistory.length;
+  relevantHistory.forEach(function(m,idx){
     var weight = Math.pow(0.6, n-1-idx);
     [m.teamA, m.teamB].forEach(function(team){
       var pl=team.players;
@@ -2963,7 +2970,7 @@ function buildEqCoOccurrence() {
 function generateEqCandidates() {
   var fieldPlayers = eqRoster.field.filter(function(p){ return eqSelectedField.has(p.id); });
   var keepers = eqRoster.keepers.filter(function(k){ return eqSelectedKeepers.has(k.id); });
-  var coOcc = buildEqCoOccurrence();
+  var coOcc = buildEqCoOccurrence(getMatchId(getNextMatch()));
   var idxAll = fieldPlayers.map(function(_,i){ return i; });
   var subsets = eqCombinationsK(idxAll, 4);
   var candidates = [];
@@ -3058,7 +3065,7 @@ function eqManualCoeffs() {
   var kA = keepers.find(function(k){ return eqManualAssign[k.id]==='A'; }) || null;
   var kB = keepers.find(function(k){ return eqManualAssign[k.id]==='B'; }) || null;
   var sA = eqStatSums(tA), sB = eqStatSums(tB);
-  var coOcc = buildEqCoOccurrence();
+  var coOcc = buildEqCoOccurrence(getMatchId(getNextMatch()));
   function repeatCost(ids){ var c=0; for(var i=0;i<ids.length;i++) for(var j=i+1;j<ids.length;j++){ var k=[ids[i],ids[j]].sort().join('|'); c+=coOcc.pair[k]||0; } return c; }
   function gkCost(ids,kid){ if(!kid) return 0; var c=0; ids.forEach(function(id){ c+=coOcc.gk[id+'|'+kid]||0; }); return c; }
   var sc = Math.abs(sA.marque-sB.marque)+Math.abs(sA.defend-sB.defend)+Math.abs(sA.endur-sB.endur)+Math.abs(sA.vivac-sB.vivac);
