@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.080926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -3198,6 +3198,9 @@ function renderEqHistory() {
     list.innerHTML = '<div style="padding:16px;text-align:center;font-size:13px;color:var(--text3);font-style:italic;">Aucun match enregistré.</div>';
     return;
   }
+  function isKnownRosterId(id) {
+    return !!(eqRoster.field.find(function(p){return p.id===id;}) || eqRoster.keepers.find(function(k){return k.id===id;}));
+  }
   function nameOf(id, extra) {
     var f = eqRoster.field.find(function(p){return p.id===id;});
     if (f) return f.name;
@@ -3221,6 +3224,21 @@ function renderEqHistory() {
         + (isKeeper ? '<span style="font-size:10px;">🧤</span>' : '')
         + '</div>';
     }
+    if (!isKnownRosterId(id)) {
+      // Identifiant "à la volée" créé par le bot (extfieldN, gksubN...) et
+      // absent du roster permanent : on affiche un champ éditable, pré-rempli
+      // avec le nom déjà connu (playersData) s'il existe, pour permettre de
+      // corriger/compléter même une entrée d'historique ancienne.
+      var extName = (extra && extra[id] && extra[id].name) || '';
+      var safeExtVal = extName.replace(/"/g, '&quot;');
+      var justify2 = side === 'right' ? 'flex-end' : 'flex-start';
+      return '<div style="padding:1px 0;display:flex;align-items:center;justify-content:'+justify2+';gap:3px;">'
+        + '<input type="text" value="'+safeExtVal+'" placeholder="Joueur extérieur" maxlength="30"'
+        + ' style="width:112px;text-align:center;background:var(--bg3);border:0.5px dashed var(--gold);border-radius:5px;padding:2px 4px;font-size:11px;color:var(--text);font-family:inherit;"'
+        + ' onchange="updateEqHistoryExtName(\''+matchKey+'\', \''+id+'\', this.value)">'
+        + (isKeeper ? '<span style="font-size:10px;">🧤</span>' : '')
+        + '</div>';
+    }
     var name = firstNameOnly(nameOf(id, extra));
     var gk = isKeeper ? '🧤' : '';
     var content = (side === 'right') ? (gk ? gk + ' ' + name : name) : (gk ? name + ' ' + gk : name);
@@ -3231,10 +3249,11 @@ function renderEqHistory() {
     var players = ids.map(function(id){
       var p = eqRoster.field.find(function(pp){ return pp.id===id; });
       if (p) return p;
-      // Idem : joueur externe non présent dans le roster permanent, on
-      // utilise ses stats figées au moment du tirage si elles ont été
-      // enregistrées avec ce match (playersData).
-      if (extra && extra[id]) return extra[id];
+      // Idem : joueur externe non présent dans le roster permanent — on
+      // n'utilise ses stats que si elles ont bien été enregistrées avec ce
+      // match (playersData avec des notes numériques). Un simple nom saisi
+      // a posteriori (sans notes) ne doit pas fausser la moyenne.
+      if (extra && extra[id] && typeof extra[id].marque === 'number') return extra[id];
       return null;
     }).filter(Boolean);
     var n = players.length || 1;
@@ -3297,6 +3316,19 @@ function updateEqHistoryGuestName(key, value) {
   var name = (value || '').trim();
   entry.guestName = name || null;
   db.ref('equipesHistory/'+key+'/guestName').set(name || null);
+}
+
+function updateEqHistoryExtName(key, id, value) {
+  // Corrige/complète a posteriori le nom d'un joueur externe (extfieldN,
+  // gksubN...) sur une entrée d'historique précise — utile notamment pour
+  // les entrées créées avant l'ajout de playersData, où seul l'identifiant
+  // technique était enregistré.
+  var entry = eqHistory.find(function(m){ return m._key === key; });
+  if (!entry) return;
+  var name = (value || '').trim();
+  if (!entry.playersData) entry.playersData = {};
+  entry.playersData[id] = Object.assign({}, entry.playersData[id] || {}, { name: name || id });
+  db.ref('equipesHistory/'+key+'/playersData/'+id+'/name').set(name || id);
 }
 
 function deleteEqHistoryMatch(key) {
