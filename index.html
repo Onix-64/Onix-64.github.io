@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.080926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -3213,37 +3213,62 @@ function renderEqHistory() {
     return id;
   }
   function firstNameOnly(fullName) { return homeNickname(fullName.split(' ')[0]); }
+  function extNameLineHtml(uid, currentName, isKeeper, side, kind, matchKey, id) {
+    var justify = side === 'right' ? 'flex-end' : 'flex-start';
+    var display = currentName ? firstNameOnly(currentName) : 'Joueur extérieur';
+    var color = currentName ? 'var(--text)' : 'var(--text3)';
+    var style = currentName ? 'normal' : 'italic';
+    var safeVal = (currentName || '').replace(/"/g, '&quot;');
+    var gk = isKeeper ? '<span style="font-size:10px;">🧤</span>' : '';
+    var spanHtml = '<span id="'+uid+'-span" onclick="startEditExtName(\''+uid+'\')" style="font-size:12px;color:'+color+';font-style:'+style+';cursor:pointer;padding:1px 0;">'+display+'</span>';
+    var inputHtml = '<input id="'+uid+'-input" type="text" value="'+safeVal+'" placeholder="Joueur extérieur" maxlength="30"'
+      + ' style="display:none;width:112px;text-align:center;background:var(--bg3);border:0.5px dashed var(--gold);border-radius:5px;padding:2px 4px;font-size:11px;color:var(--text);font-family:inherit;"'
+      + ' onblur="finishEditExtName(\''+uid+'\', \''+kind+'\', \''+matchKey+'\', \''+id+'\')"'
+      + ' onkeydown="if(event.key===\'Enter\') this.blur();">';
+    var order = (side === 'right') ? (gk + spanHtml + inputHtml) : (spanHtml + inputHtml + gk);
+    return '<div style="padding:1px 0;display:flex;align-items:center;justify-content:'+justify+';gap:3px;">'+order+'</div>';
+  }
   function playerLineHtml(id, isKeeper, matchKey, guestName, side, extra) {
     if (id === 'ext') {
-      var safeVal = (guestName || '').replace(/"/g, '&quot;');
-      var justify = side === 'right' ? 'flex-end' : 'flex-start';
-      return '<div style="padding:1px 0;display:flex;align-items:center;justify-content:'+justify+';gap:3px;">'
-        + '<input type="text" value="'+safeVal+'" placeholder="Joueur extérieur" maxlength="30"'
-        + ' style="width:112px;text-align:center;background:var(--bg3);border:0.5px dashed var(--gold);border-radius:5px;padding:2px 4px;font-size:11px;color:var(--text);font-family:inherit;"'
-        + ' onchange="updateEqHistoryGuestName(\''+matchKey+'\', this.value)">'
-        + (isKeeper ? '<span style="font-size:10px;">🧤</span>' : '')
-        + '</div>';
+      var uid1 = 'extname_'+matchKey+'_ext';
+      return extNameLineHtml(uid1, guestName || '', isKeeper, side, 'guest', matchKey, id);
     }
     if (!isKnownRosterId(id)) {
       // Identifiant "à la volée" créé par le bot (extfieldN, gksubN...) et
-      // absent du roster permanent : on affiche un champ éditable, pré-rempli
-      // avec le nom déjà connu (playersData) s'il existe, pour permettre de
-      // corriger/compléter même une entrée d'historique ancienne.
+      // absent du roster permanent : nom éditable, pré-rempli avec l'instantané
+      // déjà connu (playersData) s'il existe — utile pour corriger/compléter
+      // même une entrée d'historique ancienne.
       var extName = (extra && extra[id] && extra[id].name) || '';
-      var safeExtVal = extName.replace(/"/g, '&quot;');
-      var justify2 = side === 'right' ? 'flex-end' : 'flex-start';
-      return '<div style="padding:1px 0;display:flex;align-items:center;justify-content:'+justify2+';gap:3px;">'
-        + '<input type="text" value="'+safeExtVal+'" placeholder="Joueur extérieur" maxlength="30"'
-        + ' style="width:112px;text-align:center;background:var(--bg3);border:0.5px dashed var(--gold);border-radius:5px;padding:2px 4px;font-size:11px;color:var(--text);font-family:inherit;"'
-        + ' onchange="updateEqHistoryExtName(\''+matchKey+'\', \''+id+'\', this.value)">'
-        + (isKeeper ? '<span style="font-size:10px;">🧤</span>' : '')
-        + '</div>';
+      var uid2 = 'extname_'+matchKey+'_'+id;
+      return extNameLineHtml(uid2, extName, isKeeper, side, 'ext', matchKey, id);
     }
     var name = firstNameOnly(nameOf(id, extra));
     var gk = isKeeper ? '🧤' : '';
     var content = (side === 'right') ? (gk ? gk + ' ' + name : name) : (gk ? name + ' ' + gk : name);
     return '<div style="font-size:12px;color:var(--text);padding:1px 0;">'+content+'</div>';
   }
+  window.startEditExtName = function(uid) {
+    var span = document.getElementById(uid+'-span');
+    var input = document.getElementById(uid+'-input');
+    if (!span || !input) return;
+    span.style.display = 'none';
+    input.style.display = 'inline-block';
+    input.focus();
+    input.select();
+  };
+  window.finishEditExtName = function(uid, kind, matchKey, id) {
+    var span = document.getElementById(uid+'-span');
+    var input = document.getElementById(uid+'-input');
+    if (!span || !input) return;
+    var val = input.value.trim();
+    if (kind === 'guest') updateEqHistoryGuestName(matchKey, val);
+    else updateEqHistoryExtName(matchKey, id, val);
+    span.textContent = val ? firstNameOnly(val) : 'Joueur extérieur';
+    span.style.color = val ? 'var(--text)' : 'var(--text3)';
+    span.style.fontStyle = val ? 'normal' : 'italic';
+    input.style.display = 'none';
+    span.style.display = 'inline';
+  };
 
   function fieldStatsAvg(ids, extra) {
     var players = ids.map(function(id){
