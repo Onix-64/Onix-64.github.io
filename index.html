@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.3.080926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1583,6 +1583,13 @@ function renderHome() {
   var BM = {present:['b-present','PRESENT'], pd:['b-pd','PAS DISPO'], sb:['b-sb','DISPO SI BESOIN'], wait:['b-wait','DOIT REPONDRE']};
   var ORDER = ['present','pd','sb','wait'];
 
+  // Joueurs prévus au planning du prochain mardi (bascule automatiquement au
+  // mardi suivant dès mercredi 0h, via getNextMatch()) — pour la petite
+  // icône calendrier à côté du nom sur l'écran d'accueil.
+  var nextMatch = getNextMatch();
+  var plannedIds = {};
+  nextMatch.players.concat(nextMatch.goalkeepers).forEach(function(pl){ plannedIds[pl.id] = true; });
+
   // Trier : d'abord par catégorie, puis par heure de vote (plus rapide en premier)
   // On affiche TOUS les joueurs (pas seulement les prévus) pour voir qui n'a pas répondu
   var sorted = all.slice().sort(function(a, b) {
@@ -1604,9 +1611,12 @@ function renderHome() {
     var ts = voteTimestamps[p.id];
     var tsStr = ts ? ts.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+' a '+ts.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
     var avStyle = isGoal ? '' : 'background:'+p.color+';color:#0d0d0d';
+    var plannedIcon = plannedIds[p.id]
+      ? ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex-shrink:0;" aria-label="Prévu ce mardi"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
+      : '';
     return '<div class="player-row" onclick="openFiche('+p.id+')">'
       + '<div class="avatar '+(isGoal?'av-goal':'')+'" style="'+avStyle+'">'+ini(p)+'</div>'
-      + '<div class="p-info"><div class="p-name">'+formatName(p.prenom,p.nom)+'</div>'
+      + '<div class="p-info"><div class="p-name">'+formatName(p.prenom,p.nom)+plannedIcon+'</div>'
       + '<div class="p-sub">'+(isGoal?'Gardien':'Joueur')+(tsStr?' &middot; '+tsStr:'')+'</div></div>'
       + '<span class="badge '+bm[0]+'">'+bm[1]+'</span>'
       + '</div>';
