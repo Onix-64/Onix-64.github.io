@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.150926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1077,11 +1077,15 @@ function renderDrawnTeamsIfAny(matchId) {
   Promise.all([
     db.ref('equipesHistory').orderByChild('matchId').equalTo(matchId).once('value'),
     db.ref('matches/' + matchId + '/extFieldChoices').once('value'),
-    db.ref('matches/' + matchId + '/gkChoices').once('value')
+    db.ref('matches/' + matchId + '/gkChoices').once('value'),
+    db.ref('equipesRoster').once('value')
   ]).then(function(results){
     var val = results[0].val();
     var extFields = results[1].val() || {};
     var gks = results[2].val() || {};
+    var eqRosterVal = results[3].val() || {};
+    var eqFieldList = eqRosterVal.field || [];
+    var eqKeeperList = eqRosterVal.keepers || [];
     if (!val) return;
     var entries = Object.keys(val).map(function(k){ return val[k]; })
       .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
@@ -1099,7 +1103,13 @@ function renderDrawnTeamsIfAny(matchId) {
         return gks[gslot] ? homeNickname(gks[gslot].name) : id;
       }
       var p = PLAYERS.find(function(x){ return String(x.id) === String(id); });
-      return p ? homeNickname(formatPrenom(p.prenom)) : id;
+      if (p) return homeNickname(formatPrenom(p.prenom));
+      // Id propre à l'onglet Équipes (ex: "Joueur joker 1/2") absent du
+      // roster principal PLAYERS : on retombe sur equipesRoster, où son nom
+      // est modifiable directement (Réglages > Niveaux des joueurs).
+      var eqP = eqFieldList.find(function(x){ return String(x.id) === String(id); })
+             || eqKeeperList.find(function(x){ return String(x.id) === String(id); });
+      return eqP ? homeNickname((eqP.name || '').split(' ')[0]) : id;
     }
 
     var westList = entry.teamA.players.map(firstNameOf)
@@ -2774,9 +2784,17 @@ function initEqRosterFromPlayers() {
 function loadEquipesData() {
   // Toujours initialiser depuis PLAYERS d'abord pour avoir la liste complète
   var base = initEqRosterFromPlayers();
+  var matchId = getMatchId(getNextMatch());
 
-  db.ref('equipesRoster').once('value').then(function(snap){
-    var saved = snap.val();
+  Promise.all([
+    db.ref('equipesRoster').once('value'),
+    db.ref('matches/' + matchId + '/extFieldChoices').once('value'),
+    db.ref('matches/' + matchId + '/gkChoices').once('value')
+  ]).then(function(results){
+    var saved = results[0].val();
+    var extFieldVal = results[1].val() || {};
+    var gkVal = results[2].val() || {};
+
     if (saved && saved.field && saved.field.length) {
       // Nettoyage : l'ancien slot unique "Joueur extérieur" (id 'ext') est
       // remplacé par les 4 jokers nommés — on l'enlève s'il traîne encore.
@@ -2795,6 +2813,30 @@ function loadEquipesData() {
     } else {
       eqRoster = base;
     }
+
+    // Joueur(s) externe(s) saisi(s) en dépannage pour CE match précis, depuis
+    // le formulaire de l'écran d'accueil (nom + 4 notes / niveau gardien) :
+    // on les ajoute directement à la liste sélectionnable ici, avec leur vrai
+    // nom et leurs vraies stats, pour ne plus avoir à les représenter par un
+    // joker. Purement temporaire pour la session — jamais sauvegardé dans
+    // equipesRoster, puisqu'ils ne concernent que ce match-là.
+    Object.keys(extFieldVal).forEach(function(slot){
+      var c = extFieldVal[slot];
+      if (!c || !c.name) return;
+      var id = 'extfield' + slot;
+      if (!eqRoster.field.find(function(p){ return p.id === id; })) {
+        eqRoster.field.push({ id: id, name: c.name, marque: c.marque||3, defend: c.defend||3, endur: c.endur||3, vivac: c.vivac||3 });
+      }
+    });
+    Object.keys(gkVal).forEach(function(slot){
+      var c = gkVal[slot];
+      if (!c || !c.name) return;
+      var id = 'gksub' + slot;
+      if (!eqRoster.keepers.find(function(k){ return k.id === id; })) {
+        eqRoster.keepers.push({ id: id, name: c.name, niveau: c.niveau||3 });
+      }
+    });
+
     db.ref('equipesHistory').once('value').then(function(hsnap){
       var hval = hsnap.val();
       eqHistory = hval ? Object.keys(hval).map(function(k){ var e = hval[k]; e._key = k; return e; }) : [];
@@ -3153,6 +3195,23 @@ function validerEquipes() {
   }
   var cfg = eqResults[eqResultIndex];
   var matchId = getMatchId(getNextMatch());
+
+  // Instantané des joueurs "externes" au roster permanent (extfieldN,
+  // gksubN — dépannage saisi sur l'écran d'accueil) : sans ça, une fois la
+  // donnée d'origine (extFieldChoices) remplacée la semaine suivante,
+  // l'historique ne saurait plus retrouver leur vrai nom/notes.
+  var playersData = {};
+  cfg.teamA.concat(cfg.teamB).forEach(function(p){
+    if (/^(extfield|gksub)/.test(p.id)) {
+      playersData[p.id] = { name: p.name, marque: p.marque, defend: p.defend, endur: p.endur, vivac: p.vivac };
+    }
+  });
+  [cfg.kA, cfg.kB].forEach(function(k){
+    if (k && /^(extfield|gksub)/.test(k.id)) {
+      playersData[k.id] = { name: k.name, niveau: k.niveau };
+    }
+  });
+
   var entry = {
     date: new Date().toISOString(),
     teamA: { players: cfg.teamA.map(function(p){return p.id;}), keeper: cfg.kA?cfg.kA.id:null },
@@ -3162,6 +3221,7 @@ function validerEquipes() {
     matchId: matchId,
     balanceCost: cfg.cost
   };
+  if (Object.keys(playersData).length) entry.playersData = playersData;
   var key = 'match_' + Date.now();
   db.ref('equipesHistory/'+key).set(entry).then(function(){
     // On prévient le bot automatique qu'un tirage existe déjà pour ce match
