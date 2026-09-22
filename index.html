@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.220926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1078,7 +1078,8 @@ function renderDrawnTeamsIfAny(matchId) {
     db.ref('equipesHistory').orderByChild('matchId').equalTo(matchId).once('value'),
     db.ref('matches/' + matchId + '/extFieldChoices').once('value'),
     db.ref('matches/' + matchId + '/gkChoices').once('value'),
-    db.ref('equipesRoster').once('value')
+    db.ref('equipesRoster').once('value'),
+    db.ref('matches/' + matchId + '/teamsNotifSentAt').once('value')
   ]).then(function(results){
     var val = results[0].val();
     var extFields = results[1].val() || {};
@@ -1086,7 +1087,14 @@ function renderDrawnTeamsIfAny(matchId) {
     var eqRosterVal = results[3].val() || {};
     var eqFieldList = eqRosterVal.field || [];
     var eqKeeperList = eqRosterVal.keepers || [];
+    var notifSent = results[4].val();
     if (!val) return;
+    // Le tirage reste masqué à l'écran d'accueil tant que la notification
+    // "Équipes du mardi" n'a pas été effectivement envoyée (auto, ou via
+    // "Renvoyer la notif") — pas dès la simple validation dans l'onglet
+    // Équipes, pour ne jamais montrer une composition dont personne n'a
+    // encore été prévenu.
+    if (!notifSent) return;
     var entries = Object.keys(val).map(function(k){ return val[k]; })
       .sort(function(a, b){ return new Date(b.date) - new Date(a.date); });
     var entry = entries[0];
@@ -3253,6 +3261,10 @@ function validerEquipes() {
     // (sans le marquer "auto" — la surveillance du bot ne touchera donc
     // jamais à une composition faite à la main).
     db.ref('matches/' + matchId + '/autoDrawnAt').set(firebase.database.ServerValue.TIMESTAMP);
+    // Nouvelle composition = pas encore notifiée : on efface le marqueur
+    // d'un éventuel envoi précédent, sinon l'écran d'accueil afficherait à
+    // tort cette nouvelle composition avant que quiconque en soit informé.
+    db.ref('matches/' + matchId + '/teamsNotifSentAt').remove();
     entry._key = key;
     eqHistory.push(entry);
     renderEqHistory();
@@ -3464,6 +3476,7 @@ function deleteEqHistoryMatch(key) {
     // zéro pour que l'appli puisse reprendre la main normalement.
     if (entry && entry.matchId) {
       db.ref('matches/' + entry.matchId + '/autoDrawnAt').remove();
+      db.ref('matches/' + entry.matchId + '/teamsNotifSentAt').remove();
     }
   }).catch(function(err){ alert('Erreur : ' + (err && err.message || err)); });
 }
