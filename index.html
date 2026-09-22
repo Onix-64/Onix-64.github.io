@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.160926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -3019,6 +3019,30 @@ function buildEqCoOccurrence(excludeMatchId) {
   return {pair:pair,gk:gk};
 }
 
+// Tolérance (en points) autour du meilleur écart de stats trouvé : la
+// récidive ne sert à départager qu'entre compositions dont l'équilibre est
+// déjà "assez bon" (dans cette marge du minimum) — jamais pour préférer une
+// composition moins équilibrée juste parce qu'elle brasse mieux les joueurs.
+var EQ_BALANCE_TOLERANCE = 1.0;
+
+function rankEqCandidates(candidates, tolerance) {
+  var minBalance = candidates.reduce(function(m, c){ return Math.min(m, c.balanceCost); }, Infinity);
+  candidates.forEach(function(c){ c.withinTolerance = c.balanceCost <= minBalance + tolerance; });
+  candidates.sort(function(a, b){
+    if (a.withinTolerance !== b.withinTolerance) return a.withinTolerance ? -1 : 1;
+    if (a.withinTolerance) {
+      // Toutes deux déjà bien équilibrées : on départage par la récidive,
+      // puis en dernier recours par l'équilibre le plus fin.
+      if (a.recidiveCost !== b.recidiveCost) return a.recidiveCost - b.recidiveCost;
+      return a.balanceCost - b.balanceCost;
+    }
+    // Aucune des deux n'est "assez équilibrée" : l'équilibre prime seul, la
+    // récidive n'entre pas en jeu (ce sont de toute façon de mauvais choix).
+    return a.balanceCost - b.balanceCost;
+  });
+  return candidates;
+}
+
 function generateEqCandidates() {
   var fieldPlayers = eqRoster.field.filter(function(p){ return eqSelectedField.has(p.id); });
   var keepers = eqRoster.keepers.filter(function(k){ return eqSelectedKeepers.has(k.id); });
@@ -3038,7 +3062,9 @@ function generateEqCandidates() {
     var idsA=tA.map(function(p){return p.id;}), idsB=tB.map(function(p){return p.id;});
     var rc=(repeatCost(idsA)+repeatCost(idsB))*3;
     var gc=(gkCost(idsA,kA?kA.id:null)+gkCost(idsB,kB?kB.id:null))*2;
-    return {teamA:tA,teamB:tB,kA:kA,kB:kB,cost:sc+nc+kc+rc+gc};
+    var balanceCost = sc+nc+kc;
+    var recidiveCost = rc+gc;
+    return {teamA:tA,teamB:tB,kA:kA,kB:kB,balanceCost:balanceCost,recidiveCost:recidiveCost,cost:balanceCost+recidiveCost};
   }
 
   subsets.forEach(function(subIdx){
@@ -3048,8 +3074,7 @@ function generateEqCandidates() {
     else if(keepers.length===1){ candidates.push(evalCfg(tA,tB,keepers[0],null)); candidates.push(evalCfg(tA,tB,null,keepers[0])); }
     else { candidates.push(evalCfg(tA,tB,null,null)); }
   });
-  candidates.sort(function(a,b){return a.cost-b.cost;});
-  return candidates;
+  return rankEqCandidates(candidates, EQ_BALANCE_TOLERANCE);
 }
 
 function renderEqResult(cfg) {
