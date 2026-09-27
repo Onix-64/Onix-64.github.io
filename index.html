@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.2.220926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1452,7 +1452,17 @@ function renderHome() {
 
   // On a besoin de 8 joueurs de champ + les gardiens manquants compensés par des joueurs
   var neededFields   = 8;
-  var fillerFields   = sbFields.slice(0, Math.max(0, neededFields - presentFields.length));
+  var neededFillers  = Math.max(0, neededFields - presentFields.length);
+
+  // On ne pioche dans les "dispo si besoin" pour compléter que si tous les
+  // joueurs de champ PRÉVUS au planning de ce match ont déjà voté (peu
+  // importe leur réponse) — sinon un prévu qui vote "présent" en retard ne
+  // pourrait plus reprendre sa place si le groupe a déjà été annoncé complet
+  // entretemps avec des remplaçants non prévus à sa place.
+  var prevuFieldIds = m.players.map(function(p){ return p.id; });
+  var allPrevuFieldsVoted = prevuFieldIds.every(function(id){ return votes[id] !== undefined; });
+
+  var fillerFields   = (neededFillers === 0 || allPrevuFieldsVoted) ? sbFields.slice(0, neededFillers) : [];
   var retainedFields = presentFields.concat(fillerFields).slice(0, neededFields);
 
   // S'il manque encore des joueurs de champ (pas assez de présents/si besoin
