@@ -728,7 +728,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.270926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -3043,6 +3043,20 @@ function buildEqCoOccurrence(excludeMatchId) {
 // composition moins équilibrée juste parce qu'elle brasse mieux les joueurs.
 var EQ_BALANCE_TOLERANCE = 1.0;
 
+// Paires de joueurs qui ne doivent JAMAIS se retrouver dans la même équipe
+// (profils trop redondants tactiquement — ici Bruno et Aurélien, tous deux
+// grands/défensifs/lents). Contrainte stricte, pas une simple pénalité.
+var EQ_INCOMPATIBLE_PAIRS = [[5, 7]]; // Bruno PRATA (5) / Aurélien HARIRECHE (7)
+
+function violatesEqHardConstraints(tA, tB) {
+  var idsA = tA.map(function(p){ return p.id; });
+  var idsB = tB.map(function(p){ return p.id; });
+  return EQ_INCOMPATIBLE_PAIRS.some(function(pair){
+    return (idsA.indexOf(pair[0]) !== -1 && idsA.indexOf(pair[1]) !== -1) ||
+           (idsB.indexOf(pair[0]) !== -1 && idsB.indexOf(pair[1]) !== -1);
+  });
+}
+
 function rankEqCandidates(candidates, tolerance) {
   var minBalance = candidates.reduce(function(m, c){ return Math.min(m, c.balanceCost); }, Infinity);
   candidates.forEach(function(c){ c.withinTolerance = c.balanceCost <= minBalance + tolerance; });
@@ -3085,13 +3099,23 @@ function generateEqCandidates() {
     return {teamA:tA,teamB:tB,kA:kA,kB:kB,balanceCost:balanceCost,recidiveCost:recidiveCost,cost:balanceCost+recidiveCost};
   }
 
+  var allIgnoringHardRules = [];
   subsets.forEach(function(subIdx){
     var tA=subIdx.map(function(i){return fieldPlayers[i];});
     var tB=fieldPlayers.filter(function(_,i){return subIdx.indexOf(i)===-1;});
-    if(keepers.length===2){ candidates.push(evalCfg(tA,tB,keepers[0],keepers[1])); candidates.push(evalCfg(tA,tB,keepers[1],keepers[0])); }
-    else if(keepers.length===1){ candidates.push(evalCfg(tA,tB,keepers[0],null)); candidates.push(evalCfg(tA,tB,null,keepers[0])); }
-    else { candidates.push(evalCfg(tA,tB,null,null)); }
+    var blocked = violatesEqHardConstraints(tA, tB);
+    function pushCfg(cfg){ allIgnoringHardRules.push(cfg); if (!blocked) candidates.push(cfg); }
+    if(keepers.length===2){ pushCfg(evalCfg(tA,tB,keepers[0],keepers[1])); pushCfg(evalCfg(tA,tB,keepers[1],keepers[0])); }
+    else if(keepers.length===1){ pushCfg(evalCfg(tA,tB,keepers[0],null)); pushCfg(evalCfg(tA,tB,null,keepers[0])); }
+    else { pushCfg(evalCfg(tA,tB,null,null)); }
   });
+  if (!candidates.length) {
+    // Filet de sécurité : si aucune composition possible ne respecte la
+    // contrainte (sélection de joueurs trop restreinte), on l'ignore plutôt
+    // que de bloquer complètement le tirage.
+    console.warn('Aucune composition ne sépare Bruno et Aurélien — contrainte ignorée exceptionnellement.');
+    return rankEqCandidates(allIgnoringHardRules, EQ_BALANCE_TOLERANCE);
+  }
   return rankEqCandidates(candidates, EQ_BALANCE_TOLERANCE);
 }
 
