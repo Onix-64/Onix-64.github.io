@@ -592,6 +592,15 @@
     </div>
 
     <div class="card">
+      <div class="card-lbl">Test de notification</div>
+      <div class="tgl-sub" style="margin-bottom:12px;">
+        Pour repérer les téléphones qui ne reçoivent rien : envoie une notif de test avec un bouton "Bien reçu" à tout le monde. Se déclenche uniquement depuis GitHub (Actions → "Notification de test - Foot du mardi" → Run workflow) — rien à cliquer ici, cette liste affiche juste les résultats en direct.
+      </div>
+      <div class="tgl-sub" id="admin-testnotif-summary" style="margin-bottom:6px">Chargement...</div>
+      <div id="admin-testnotif-list"></div>
+    </div>
+
+    <div class="card">
       <div class="card-lbl">Mon compte</div>
       <div class="toggle-row" style="cursor:pointer" onclick="logout()">
         <div><div class="tgl-lbl">Se déconnecter</div><div class="tgl-sub">Revenir à l'écran PIN</div></div>
@@ -728,7 +737,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.290926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2503,6 +2512,55 @@ function renderNotifs() {
   }
 }
 
+var testNotifListenerRef = null;
+function renderTestNotifPanel() {
+  var summaryEl = document.getElementById('admin-testnotif-summary');
+  var listEl = document.getElementById('admin-testnotif-list');
+  if (!summaryEl || !listEl) return;
+
+  // On détache l'écoute précédente pour ne pas en accumuler plusieurs si on
+  // revient sur cet onglet plusieurs fois dans la même session.
+  if (testNotifListenerRef) { testNotifListenerRef.off(); testNotifListenerRef = null; }
+
+  db.ref('notifTests_latest').once('value').then(function(latestSnap){
+    var latestId = latestSnap.val();
+    if (!latestId) {
+      summaryEl.textContent = "Aucun test envoyé pour l'instant.";
+      listEl.innerHTML = '';
+      return;
+    }
+
+    Promise.all([
+      db.ref('notifTests/' + latestId + '/sentAt').once('value'),
+      db.ref('fcmTokens').once('value')
+    ]).then(function(results){
+      var sentAt = results[0].val();
+      var tokens = results[1].val() || {};
+      // Uniquement les joueurs ayant un token enregistré : ceux sans token
+      // n'ont simplement jamais activé les notifs, ce n'est pas le même
+      // problème que celui qu'on cherche à diagnostiquer ici.
+      var roster = PIN_PLAYERS.filter(function(p){ return p.id !== 0 && !p.isVisitor && tokens[p.id]; });
+      var ts = sentAt ? new Date(sentAt) : null;
+      var tsStr = ts ? ts.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) + ' à ' + ts.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
+
+      testNotifListenerRef = db.ref('notifTests/' + latestId + '/responses');
+      testNotifListenerRef.on('value', function(respSnap){
+        var responses = respSnap.val() || {};
+        var nbAck = roster.filter(function(p){ return responses[p.id]; }).length;
+        summaryEl.textContent = 'Dernier test envoyé le ' + tsStr + ' — ' + nbAck + ' / ' + roster.length + ' confirmé(s) (parmi ceux ayant les notifs activées)';
+        listEl.innerHTML = roster.map(function(p){
+          var r = responses[p.id];
+          var rts = r && r.timestamp ? new Date(r.timestamp) : null;
+          var label = rts ? ('✅ ' + rts.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})) : 'en attente';
+          var color = rts ? 'var(--green)' : 'var(--text3)';
+          return '<div class="toggle-row"><div class="tgl-lbl">' + formatName(p.prenom, p.nom) + '</div>' +
+                 '<span style="color:' + color + ';font-size:12px;font-weight:700;">' + label + '</span></div>';
+        }).join('');
+      });
+    });
+  });
+}
+
 function renderAdminPanel() {
   db.ref('settings/notificationsPaused').once('value').then(function(snap) {
     var paused = !!snap.val();
@@ -2551,6 +2609,8 @@ function renderAdminPanel() {
       }).join('');
     }
   });
+
+  renderTestNotifPanel();
 
   // Visiteurs
   db.ref('connectedVisitors').once('value').then(function(snap) {

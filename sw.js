@@ -2,7 +2,7 @@
 // À chaque nouvelle mise en ligne, change les deux en même temps (même date
 // JJMMAA) : ça force les téléphones à jeter l'ancien cache et à récupérer la
 // dernière version, en plus d'afficher le bon numéro dans le bandeau.
-const CACHE_NAME = 'foot-mardi-v1.1.290926';
+const CACHE_NAME = 'foot-mardi-v1.1.100726';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/logo-dark.png', '/logo-light.png', '/ball-dark.png', '/ball-light.png'];
 
 self.addEventListener('install', event => {
@@ -73,6 +73,20 @@ messaging.onBackgroundMessage(payload => {
     return;
   }
 
+  // Notification de TEST (diagnostic des téléphones qui ne reçoivent rien) :
+  // un seul bouton de confirmation, sans lien avec le vote ou les équipes.
+  if (data.type === 'test') {
+    self.registration.showNotification(data.title || '🔔 Test de notification', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: 'foot-mardi-test-' + (data.testId || ''),
+      data: data,
+      actions: [{ action: 'ack', title: '✅ Bien reçu' }]
+    });
+    return;
+  }
+
   // Les boutons de vote ne doivent apparaître que sur une vraie demande de
   // vote (sondage/rappel) — pas sur une notif purement informative comme
   // "Groupe complet" (tout le monde a déjà voté à ce stade).
@@ -123,6 +137,27 @@ function castVoteFromSW(playerId, matchId, choice) {
   });
 }
 
+// Confirme la réception d'une notification de test directement depuis le
+// service worker (sans ouvrir l'appli), puis remplace la notif par un merci.
+function ackTestFromSW(playerId, testId) {
+  if (!playerId || !testId) return Promise.resolve();
+  return db.ref('notifTests/' + testId + '/responses/' + playerId).set({
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  }).then(() => {
+    return self.registration.showNotification('🔔 Test de notification', {
+      body: 'Merci, réception confirmée !',
+      icon: '/icons/icon-192.png',
+      tag: 'foot-mardi-test-' + testId
+    });
+  }).catch(() => {
+    return self.registration.showNotification('🔔 Test de notification', {
+      body: "Erreur, ouvre l'appli une fois pour confirmer autrement.",
+      icon: '/icons/icon-192.png',
+      tag: 'foot-mardi-test-' + testId
+    });
+  });
+}
+
 // Au clic sur la notification : si c'est un bouton d'action, on vote directement.
 // Sinon (clic sur le corps de la notification), on ouvre l'appli comme avant.
 self.addEventListener('notificationclick', event => {
@@ -132,6 +167,11 @@ self.addEventListener('notificationclick', event => {
 
   if (action === 'present' || action === 'pd' || action === 'sb') {
     event.waitUntil(castVoteFromSW(data.playerId, data.matchId, action));
+    return;
+  }
+
+  if (action === 'ack') {
+    event.waitUntil(ackTestFromSW(data.playerId, data.testId));
     return;
   }
 
