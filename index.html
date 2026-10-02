@@ -310,6 +310,10 @@
       <div class="banner-time">Complexe INDOOR64 · 19h30 à 20h30</div>
       <div style="margin-top:14px;display:flex;justify-content:center;" id="group-status"></div>
     </div>
+    <div id="testnotif-banner" style="display:none;background:var(--gold-bg,var(--bg3));border:1px solid var(--gold-dim,var(--border2));border-radius:var(--r-md);padding:12px 14px;margin-bottom:12px;text-align:center;">
+      <div style="font-size:13px;color:var(--text);margin-bottom:8px;">🔔 Tu as reçu une notification de test ?</div>
+      <button onclick="confirmTestNotifManually()" style="background:var(--gold);color:var(--bg);border:none;border-radius:var(--r-sm);padding:8px 16px;font-size:13px;font-weight:800;cursor:pointer;">✅ Confirmer la réception</button>
+    </div>
     <div class="card" id="vote-card" style="margin-bottom:12px;">
       <div id="vote-subtitle" style="font-size:12px;color:var(--text2);margin-bottom:6px;text-align:center;"></div>
       <div id="vote-pending-msg" style="display:none;text-align:center;padding:14px 4px;font-size:13px;color:var(--text2);line-height:1.5;"></div>
@@ -598,6 +602,7 @@
       </div>
       <div class="tgl-sub" id="admin-testnotif-summary" style="margin-bottom:6px">Chargement...</div>
       <div id="admin-testnotif-list"></div>
+      <button id="admin-testnotif-stop-btn" onclick="stopTestNotif()" style="display:none;width:100%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--red);border-radius:var(--r-md);padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;">⏹️ Arrêter ce test</button>
     </div>
 
     <div class="card">
@@ -737,7 +742,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.300926';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1658,6 +1663,47 @@ function renderHome() {
       + '<span class="badge '+bm[0]+'">'+bm[1]+'</span>'
       + '</div>';
   }).join('');
+
+  checkTestNotifBanner();
+}
+
+// Bouton de confirmation manuelle d'une notification de test — nécessaire
+// sur iPhone, où Safari ne permet pas les boutons d'action directement dans
+// les notifications (donc pas de "✅ Bien reçu" cliquable depuis la notif
+// elle-même). On n'affiche la bannière que si un test a été envoyé il y a
+// moins de 24h et que ce joueur n'a pas encore confirmé.
+function checkTestNotifBanner() {
+  var banner = document.getElementById('testnotif-banner');
+  if (!banner || !currentUser || currentUser.id === 0 || currentUser.isVisitor) return;
+
+  db.ref('notifTests_latest').once('value').then(function(latestSnap){
+    var latestId = latestSnap.val();
+    if (!latestId) { banner.style.display = 'none'; return; }
+
+    Promise.all([
+      db.ref('notifTests/' + latestId + '/sentAt').once('value'),
+      db.ref('notifTests/' + latestId + '/closedAt').once('value'),
+      db.ref('notifTests/' + latestId + '/responses/' + currentUser.id).once('value')
+    ]).then(function(results){
+      var sentAt = results[0].val();
+      var closed = !!results[1].val();
+      var alreadyConfirmed = !!results[2].val();
+      var isRecent = sentAt && (Date.now() - sentAt) < 24 * 60 * 60 * 1000;
+      banner.style.display = (isRecent && !closed && !alreadyConfirmed) ? 'block' : 'none';
+      banner._latestTestId = latestId;
+    });
+  });
+}
+
+function confirmTestNotifManually() {
+  var banner = document.getElementById('testnotif-banner');
+  var testId = banner && banner._latestTestId;
+  if (!testId || !currentUser) return;
+  db.ref('notifTests/' + testId + '/responses/' + currentUser.id).set({
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  }).then(function(){
+    banner.style.display = 'none';
+  });
 }
 
 // ══ PLANNING ══
@@ -2516,6 +2562,7 @@ var testNotifListenerRef = null;
 function renderTestNotifPanel() {
   var summaryEl = document.getElementById('admin-testnotif-summary');
   var listEl = document.getElementById('admin-testnotif-list');
+  var stopBtn = document.getElementById('admin-testnotif-stop-btn');
   if (!summaryEl || !listEl) return;
 
   // On détache l'écoute précédente pour ne pas en accumuler plusieurs si on
@@ -2527,15 +2574,18 @@ function renderTestNotifPanel() {
     if (!latestId) {
       summaryEl.textContent = "Aucun test envoyé pour l'instant.";
       listEl.innerHTML = '';
+      if (stopBtn) stopBtn.style.display = 'none';
       return;
     }
 
     Promise.all([
       db.ref('notifTests/' + latestId + '/sentAt').once('value'),
+      db.ref('notifTests/' + latestId + '/closedAt').once('value'),
       db.ref('fcmTokens').once('value')
     ]).then(function(results){
       var sentAt = results[0].val();
-      var tokens = results[1].val() || {};
+      var closed = !!results[1].val();
+      var tokens = results[2].val() || {};
       // Uniquement les joueurs ayant un token enregistré : ceux sans token
       // n'ont simplement jamais activé les notifs, ce n'est pas le même
       // problème que celui qu'on cherche à diagnostiquer ici.
@@ -2543,11 +2593,16 @@ function renderTestNotifPanel() {
       var ts = sentAt ? new Date(sentAt) : null;
       var tsStr = ts ? ts.toLocaleDateString('fr-FR',{day:'numeric',month:'short'}) + ' à ' + ts.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : '';
 
+      if (stopBtn) {
+        stopBtn.style.display = closed ? 'none' : 'block';
+        stopBtn._latestTestId = latestId;
+      }
+
       testNotifListenerRef = db.ref('notifTests/' + latestId + '/responses');
       testNotifListenerRef.on('value', function(respSnap){
         var responses = respSnap.val() || {};
         var nbAck = roster.filter(function(p){ return responses[p.id]; }).length;
-        summaryEl.textContent = 'Dernier test envoyé le ' + tsStr + ' — ' + nbAck + ' / ' + roster.length + ' confirmé(s) (parmi ceux ayant les notifs activées)';
+        summaryEl.textContent = 'Dernier test envoyé le ' + tsStr + (closed ? ' (arrêté)' : '') + ' — ' + nbAck + ' / ' + roster.length + ' confirmé(s) (parmi ceux ayant les notifs activées)';
         listEl.innerHTML = roster.map(function(p){
           var r = responses[p.id];
           var rts = r && r.timestamp ? new Date(r.timestamp) : null;
@@ -2558,6 +2613,16 @@ function renderTestNotifPanel() {
         }).join('');
       });
     });
+  });
+}
+
+function stopTestNotif() {
+  var stopBtn = document.getElementById('admin-testnotif-stop-btn');
+  var testId = stopBtn && stopBtn._latestTestId;
+  if (!testId) return;
+  if (!confirm('Arrêter ce test ? La bannière de confirmation disparaîtra immédiatement pour tout le monde.')) return;
+  db.ref('notifTests/' + testId + '/closedAt').set(firebase.database.ServerValue.TIMESTAMP).then(function(){
+    renderTestNotifPanel();
   });
 }
 
