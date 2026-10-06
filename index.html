@@ -751,7 +751,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.061026';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -3212,6 +3212,46 @@ function buildEqCoOccurrence(excludeMatchId) {
   return {pair:pair,gk:gk};
 }
 
+// ── Série d'affilée avec le même gardien ──
+// Pour chaque joueur, on regarde ses matchs JOUÉS (les absences sont ignorées,
+// donc un mardi manqué ne casse pas la série), du plus récent au plus ancien,
+// et on compte combien de fois de suite il a eu le même gardien. Sert à
+// éviter qu'un joueur se retrouve une 3e fois de suite avec le même gardien.
+// Doit rester identique à _shared.js (buildKeeperStreaks / EQ_KEEPER_STREAK_MAX).
+var EQ_KEEPER_STREAK_MAX = 2; // 2 fois d'affilée permis ; la 3e est à éviter
+
+function buildKeeperStreaks(excludeMatchId) {
+  var hist = eqHistory.filter(function(m){ return !excludeMatchId || m.matchId !== excludeMatchId; });
+  hist = hist.slice().sort(function(a, b){
+    return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(); // du plus récent au plus ancien
+  });
+  var streaks = {}; // id -> { keeper, count, done }
+  hist.forEach(function(m){
+    [m.teamA, m.teamB].forEach(function(team){
+      if (!team || !team.keeper) return;
+      (team.players || []).forEach(function(pid){
+        var st = streaks[pid];
+        if (!st) { streaks[pid] = { keeper: String(team.keeper), count: 1, done: false }; return; }
+        if (st.done) return;
+        if (st.keeper === String(team.keeper)) st.count++; else st.done = true;
+      });
+    });
+  });
+  return streaks;
+}
+
+// Nombre de joueurs de "ids" qui auraient ce gardien une fois de plus alors
+// qu'ils l'ont déjà eu EQ_KEEPER_STREAK_MAX fois d'affilée.
+function keeperStreakViolations(ids, keeper, streaks) {
+  if (!keeper) return 0;
+  var n = 0;
+  ids.forEach(function(id){
+    var st = streaks[id];
+    if (st && st.keeper === String(keeper.id) && st.count >= EQ_KEEPER_STREAK_MAX) n++;
+  });
+  return n;
+}
+
 // Tolérance (en points) autour du meilleur écart de stats trouvé : la
 // récidive ne sert à départager qu'entre compositions dont l'équilibre est
 // déjà "assez bon" (dans cette marge du minimum) — jamais pour préférer une
@@ -3238,8 +3278,11 @@ function rankEqCandidates(candidates, tolerance) {
   candidates.sort(function(a, b){
     if (a.withinTolerance !== b.withinTolerance) return a.withinTolerance ? -1 : 1;
     if (a.withinTolerance) {
-      // Toutes deux déjà bien équilibrées : on départage par la récidive,
-      // puis en dernier recours par l'équilibre le plus fin.
+      // Toutes deux déjà bien équilibrées : on évite d'abord qu'un joueur
+      // ait une 3e fois de suite le même gardien, puis on départage par la
+      // récidive, puis en dernier recours par l'équilibre le plus fin.
+      var ka = a.keeperStreakCost || 0, kb = b.keeperStreakCost || 0;
+      if (ka !== kb) return ka - kb;
       if (a.recidiveCost !== b.recidiveCost) return a.recidiveCost - b.recidiveCost;
       return a.balanceCost - b.balanceCost;
     }
@@ -3254,6 +3297,7 @@ function generateEqCandidates() {
   var fieldPlayers = eqRoster.field.filter(function(p){ return eqSelectedField.has(p.id); });
   var keepers = eqRoster.keepers.filter(function(k){ return eqSelectedKeepers.has(k.id); });
   var coOcc = buildEqCoOccurrence(getMatchId(getNextMatch()));
+  var keeperStreaks = buildKeeperStreaks(getMatchId(getNextMatch()));
   var idxAll = fieldPlayers.map(function(_,i){ return i; });
   var subsets = eqCombinationsK(idxAll, 4);
   var candidates = [];
@@ -3271,7 +3315,8 @@ function generateEqCandidates() {
     var gc=(gkCost(idsA,kA?kA.id:null)+gkCost(idsB,kB?kB.id:null))*2;
     var balanceCost = sc+nc+kc;
     var recidiveCost = rc+gc;
-    return {teamA:tA,teamB:tB,kA:kA,kB:kB,balanceCost:balanceCost,recidiveCost:recidiveCost,cost:balanceCost+recidiveCost};
+    var keeperStreakCost = keeperStreakViolations(idsA,kA,keeperStreaks)+keeperStreakViolations(idsB,kB,keeperStreaks);
+    return {teamA:tA,teamB:tB,kA:kA,kB:kB,balanceCost:balanceCost,recidiveCost:recidiveCost,keeperStreakCost:keeperStreakCost,cost:balanceCost+recidiveCost};
   }
 
   var allIgnoringHardRules = [];
