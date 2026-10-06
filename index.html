@@ -600,9 +600,18 @@
       <div class="tgl-sub" style="margin-bottom:12px;">
         Pour repérer les téléphones qui ne reçoivent rien : envoie une notif de test avec un bouton "Bien reçu" à tout le monde. Se déclenche uniquement depuis GitHub (Actions → "Notification de test - Foot du mardi" → Run workflow) — rien à cliquer ici, cette liste affiche juste les résultats en direct.
       </div>
-      <div class="tgl-sub" id="admin-testnotif-summary" style="margin-bottom:6px">Chargement...</div>
-      <div id="admin-testnotif-list"></div>
-      <button id="admin-testnotif-stop-btn" onclick="stopTestNotif()" style="display:none;width:100%;background:var(--bg3);border:0.5px solid var(--border2);color:var(--red);border-radius:var(--r-md);padding:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;">⏹️ Arrêter ce test</button>
+      <div class="toggle-row" style="cursor:pointer" onclick="toggleTestNotifPanelHidden()">
+        <div><div class="tgl-lbl">Masquer les résultats</div><div class="tgl-sub">Replie la liste ci-dessous (ne touche pas au test en cours)</div></div>
+        <button class="toggle" id="admin-testnotif-hide-toggle"></button>
+      </div>
+      <div id="admin-testnotif-body">
+        <div class="tgl-sub" id="admin-testnotif-summary" style="margin-bottom:6px">Chargement...</div>
+        <div id="admin-testnotif-list"></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button id="admin-testnotif-stop-btn" onclick="stopTestNotif()" style="display:none;flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--red);border-radius:var(--r-md);padding:10px;font-size:13px;font-weight:700;cursor:pointer;">⏹️ Arrêter ce test</button>
+          <button id="admin-testnotif-reset-btn" onclick="resetTestNotif()" style="display:none;flex:1;background:var(--bg3);border:0.5px solid var(--border2);color:var(--text3);border-radius:var(--r-md);padding:10px;font-size:13px;font-weight:700;cursor:pointer;">🔄 Réinitialiser</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -742,7 +751,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.1.021026';
+var APP_VERSION = '1.1.100726';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -2563,7 +2572,10 @@ function renderTestNotifPanel() {
   var summaryEl = document.getElementById('admin-testnotif-summary');
   var listEl = document.getElementById('admin-testnotif-list');
   var stopBtn = document.getElementById('admin-testnotif-stop-btn');
+  var resetBtn = document.getElementById('admin-testnotif-reset-btn');
   if (!summaryEl || !listEl) return;
+
+  applyTestNotifPanelHidden();
 
   // On détache l'écoute précédente pour ne pas en accumuler plusieurs si on
   // revient sur cet onglet plusieurs fois dans la même session.
@@ -2575,6 +2587,7 @@ function renderTestNotifPanel() {
       summaryEl.textContent = "Aucun test envoyé pour l'instant.";
       listEl.innerHTML = '';
       if (stopBtn) stopBtn.style.display = 'none';
+      if (resetBtn) resetBtn.style.display = 'none';
       return;
     }
 
@@ -2596,6 +2609,10 @@ function renderTestNotifPanel() {
       if (stopBtn) {
         stopBtn.style.display = closed ? 'none' : 'block';
         stopBtn._latestTestId = latestId;
+      }
+      if (resetBtn) {
+        resetBtn.style.display = 'block';
+        resetBtn._latestTestId = latestId;
       }
 
       testNotifListenerRef = db.ref('notifTests/' + latestId + '/responses');
@@ -2624,6 +2641,39 @@ function stopTestNotif() {
   db.ref('notifTests/' + testId + '/closedAt').set(firebase.database.ServerValue.TIMESTAMP).then(function(){
     renderTestNotifPanel();
   });
+}
+
+// Efface complètement le test en cours (résultats + pointeur "dernier test"),
+// pour repartir d'un panneau vide sans attendre un nouvel envoi depuis
+// GitHub. N'envoie aucune notification — purement une remise à zéro de
+// l'affichage/suivi côté base de données.
+function resetTestNotif() {
+  if (!currentUser || !currentUser.isAdmin) return;
+  if (!confirm("Effacer les résultats du test de notification en cours ? Cette action est irréversible (tu pourras relancer un nouveau test depuis GitHub quand tu veux).")) return;
+  db.ref('notifTests_latest').once('value').then(function(snap){
+    var testId = snap.val();
+    var removeTest = testId ? db.ref('notifTests/' + testId).remove() : Promise.resolve();
+    return removeTest.then(function(){ return db.ref('notifTests_latest').remove(); });
+  }).then(function(){
+    renderTestNotifPanel();
+  });
+}
+
+// Préférence purement locale (par appareil) : replie/déplie la liste de
+// résultats pour ne pas encombrer l'onglet Réglages quand on n'est pas en
+// train de diagnostiquer un téléphone. Ne touche à aucune donnée du test.
+function toggleTestNotifPanelHidden() {
+  var hidden = localStorage.getItem('testNotifPanelHidden') === '1';
+  localStorage.setItem('testNotifPanelHidden', hidden ? '0' : '1');
+  applyTestNotifPanelHidden();
+}
+
+function applyTestNotifPanelHidden() {
+  var hidden = localStorage.getItem('testNotifPanelHidden') === '1';
+  var body = document.getElementById('admin-testnotif-body');
+  var toggle = document.getElementById('admin-testnotif-hide-toggle');
+  if (body) body.style.display = hidden ? 'none' : 'block';
+  if (toggle) toggle.classList.toggle('on', hidden);
 }
 
 function renderAdminPanel() {
