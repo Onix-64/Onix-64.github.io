@@ -761,7 +761,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.4.261026';
+var APP_VERSION = '1.5.261026';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -3525,7 +3525,16 @@ function renderEqResult(cfg) {
   teamBlock('eq-team-a', cfg.teamA, cfg.kA, 'var(--teamWest)');
   teamBlock('eq-team-b', cfg.teamB, cfg.kB, 'var(--teamEast)');
   var bn = document.getElementById('eq-balance-note');
-  if (bn) bn.textContent = 'Équilibre estimé : '+cfg.cost.toFixed(1)+' pt(s) — plus c\'est bas, plus c\'est serré.';
+  if (bn) {
+    if (typeof cfg.balanceCost === 'number' && typeof cfg.recidiveCost === 'number') {
+      // Deux mesures séparées : l'écart de niveau (ce qui compte pour l'équilibre)
+      // et la pénalité de répétition (duos déjà vus lors de matchs récents).
+      bn.innerHTML = 'Écart d\'équilibre : <strong>'+cfg.balanceCost.toFixed(1)+'</strong> pt(s) — plus c\'est bas, plus c\'est serré'
+        + '<br>Pénalité de répétition : <strong>'+cfg.recidiveCost.toFixed(1)+'</strong> (duos déjà vus récemment)';
+    } else {
+      bn.textContent = 'Équilibre estimé : '+cfg.cost.toFixed(1)+' pt(s) — plus c\'est bas, plus c\'est serré.';
+    }
+  }
 }
 
 function genEquipes() {
