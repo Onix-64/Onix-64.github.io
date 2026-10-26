@@ -17,7 +17,7 @@
       --gold:#e8c14a; --gold-dim:#7a6030; --gold-bg:#1e1a0e;
       --text:#f0f0f0; --text2:#888; --text3:#555;
       --green:#4ade80; --green-bg:#0d2018;
-      --red:#f87171; --red-bg:#200d0d;
+      --red:#f87171; --red-bg:#200d0d; --indispo-x:#0d0d0d;
       --amber:#fbbf24; --amber-bg:#201508;
       --purple:#e8c14a;
       --r-sm:8px; --r-md:12px; --r-lg:16px;
@@ -119,6 +119,16 @@
     .date-pill { font-size:12px; font-weight:700; padding:6px 14px; border-radius:99px; }
     .date-pill.yes { background:var(--green-bg); border:0.5px solid #1a4028; color:var(--green); }
     .date-pill.no { background:var(--red-bg); border:0.5px solid #3a1010; color:var(--red); }
+    /* Indisponibilités annoncées : cadre rouge autour de la pastille + pastille-croix */
+    .pill-wrap { position:relative; display:inline-flex; padding:3px; margin:-3px; border:2px solid transparent; border-radius:99px; }
+    .pill-wrap.editable { cursor:pointer; -webkit-tap-highlight-color:transparent; }
+    .pill-wrap.indispo { border-color:var(--red); }
+    .pill-wrap .indispo-badge { position:absolute; top:-10px; right:-8px; }
+    .indispo-intro { font-size:12px; line-height:1.5; color:var(--text2); margin-bottom:12px; }
+    .indispo-dirty { display:none; font-size:12px; font-weight:700; color:var(--amber); background:var(--amber-bg); border-radius:var(--r-sm); padding:8px 12px; margin-bottom:12px; }
+    .indispo-save-btn { width:100%; border:none; border-radius:var(--r-md); padding:13px; font-size:14px; font-weight:800; cursor:pointer; background:var(--gold); color:#0d0d0d; }
+    .indispo-save-btn:disabled { background:var(--bg4); color:var(--text3); cursor:default; }
+    .indispo-status { font-size:12px; font-weight:700; text-align:center; margin-top:10px; line-height:1.5; }
     .ts { font-size:10px; font-weight:700; padding:3px 9px; border-radius:99px; border:0.5px solid; text-align:center; }
     .ts-next { background:var(--gold-bg); border-color:var(--gold-dim); color:var(--gold); }
     .ts-plain { background:var(--bg3); border-color:var(--border2); color:var(--text3); }
@@ -213,7 +223,7 @@
       --gold:#b8860b; --gold-dim:#c8a030; --gold-bg:#fef9e7;
       --text:#111827; --text2:#4a5568; --text3:#9ca3af;
       --green:#16a34a; --green-bg:#dcfce7;
-      --red:#dc2626; --red-bg:#fee2e2;
+      --red:#dc2626; --red-bg:#fee2e2; --indispo-x:#ffffff;
       --amber:#d97706; --amber-bg:#fef3c7;
       --purple:#7c3aed;
       --teamWest:#b91c1c; --teamWest-bg:#fee2e2; --teamWestStar:#b91c1c;
@@ -751,7 +761,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.3.061026';
+var APP_VERSION = '1.4.261026';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1022,6 +1032,7 @@ function getNextMatch() { return planning[getNextMatchIndex()]; }
 // ══ VOTES (synchronisés en temps réel via Firebase) ══
 var votes = {};
 var voteTimestamps = {};
+var voteAuto = {}; // true si le vote "Pas dispo" a été enregistré automatiquement (indisponibilité annoncée)
 var votesRef = null; // référence Firebase actuellement écoutée
 var gkChoicesRef = null;
 var gkChoices = {}; // choix admin pour compenser un/des gardien(s) manquant(s), voir renderHome()
@@ -1042,10 +1053,12 @@ function listenVotes(matchId) {
     var data = snapshot.val() || {};
     votes = {};
     voteTimestamps = {};
+    voteAuto = {};
     Object.keys(data).forEach(function(pid) {
       var entry = data[pid];
       if (entry && entry.choice) {
         votes[pid] = entry.choice;
+        if (entry.auto && entry.choice === 'pd') voteAuto[pid] = true;
         if (entry.timestamp) voteTimestamps[pid] = new Date(entry.timestamp);
       }
     });
@@ -1665,10 +1678,13 @@ function renderHome() {
     var plannedIcon = plannedIds[p.id]
       ? ' <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;flex-shrink:0;" aria-label="Prévu ce mardi"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>'
       : '';
+    var isAuto = !!voteAuto[p.id] && v === 'pd';
+    var indispoIcon = isAuto ? ' ' + indispoSvg(14, 'vertical-align:-3px;flex-shrink:0;') : '';
+    var subExtra = isAuto ? ' &middot; indisponible, annoncé à l\'avance' : (tsStr ? ' &middot; '+tsStr : '');
     return '<div class="player-row" onclick="openFiche('+p.id+')">'
       + '<div class="avatar '+(isGoal?'av-goal':'')+'" style="'+avStyle+'">'+ini(p)+'</div>'
-      + '<div class="p-info"><div class="p-name">'+formatName(p.prenom,p.nom)+plannedIcon+'</div>'
-      + '<div class="p-sub">'+(isGoal?'Gardien':'Joueur')+(tsStr?' &middot; '+tsStr:'')+'</div></div>'
+      + '<div class="p-info"><div class="p-name">'+formatName(p.prenom,p.nom)+plannedIcon+indispoIcon+'</div>'
+      + '<div class="p-sub">'+(isGoal?'Gardien':'Joueur')+subExtra+'</div></div>'
       + '<span class="badge '+bm[0]+'">'+bm[1]+'</span>'
       + '</div>';
   }).join('');
@@ -1756,26 +1772,166 @@ function renderPlanningGeneral() {
   }).join('');
 }
 
+// ══ INDISPONIBILITÉS ANNONCÉES À L'AVANCE ══
+// Firebase : unavailability/{playerId}/{matchId} = true
+// À l'ouverture du sondage, le bot (notify.js) enregistre un vote "Pas dispo"
+// (flag auto:true) pour les joueurs concernés. Si le sondage est déjà ouvert au
+// moment de l'enregistrement, l'appli écrit ce vote tout de suite.
+var indispoSaved = {};
+var indispoPending = {};
+var indispoRef = null;
+var indispoRefUid = null;
+var indispoSaving = false;
+var indispoMsg = null; // {type:'ok'|'err', text}
+var indispoMsgTimer = null;
+
+function indispoSvg(size, style) {
+  return '<svg class="indispo-badge-svg" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" role="img" aria-label="Indisponible, annoncé à l\'avance" style="'+(style||'')+'">'
+    + '<circle cx="12" cy="12" r="11" fill="var(--red)"/>'
+    + '<line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke="var(--indispo-x)" stroke-width="2.6" stroke-linecap="round"/>'
+    + '<line x1="15.5" y1="8.5" x2="8.5" y2="15.5" stroke="var(--indispo-x)" stroke-width="2.6" stroke-linecap="round"/></svg>';
+}
+function indispoBadgeSvg() {
+  return '<svg class="indispo-badge" width="20" height="20" viewBox="0 0 24 24" role="img" aria-label="Indisponible" style="pointer-events:none">'
+    + '<circle cx="12" cy="12" r="10.5" fill="var(--red)" stroke="var(--bg2)" stroke-width="2"/>'
+    + '<line x1="8.5" y1="8.5" x2="15.5" y2="15.5" stroke="var(--indispo-x)" stroke-width="2.6" stroke-linecap="round"/>'
+    + '<line x1="15.5" y1="8.5" x2="8.5" y2="15.5" stroke="var(--indispo-x)" stroke-width="2.6" stroke-linecap="round"/></svg>';
+}
+function indispoClean(o) {
+  var r = {};
+  Object.keys(o || {}).forEach(function(k){ if (o[k]) r[k] = true; });
+  return r;
+}
+function indispoIsDirty() {
+  var a = indispoClean(indispoSaved), b = indispoClean(indispoPending);
+  var ka = Object.keys(a), kb = Object.keys(b);
+  if (ka.length !== kb.length) return true;
+  return ka.some(function(k){ return !b[k]; });
+}
+function listenMyIndispo() {
+  if (!currentUser || currentUser.id === 0 || currentUser.isVisitor) return;
+  if (indispoRef && indispoRefUid === currentUser.id) return;
+  if (indispoRef) indispoRef.off();
+  indispoSaved = {}; indispoPending = {}; indispoMsg = null;
+  indispoRefUid = currentUser.id;
+  indispoRef = db.ref('unavailability/' + currentUser.id);
+  indispoRef.on('value', function(snap) {
+    var wasDirty = indispoIsDirty();
+    indispoSaved = indispoClean(snap.val());
+    if (!wasDirty) indispoPending = indispoClean(indispoSaved);
+    renderPlanningIndiv();
+  }, function(err) {
+    console.error('Firebase (unavailability) :', err);
+  });
+}
+
+function toggleIndispo(matchId) {
+  if (indispoSaving) return;
+  if (indispoPending[matchId]) delete indispoPending[matchId]; else indispoPending[matchId] = true;
+  indispoMsg = null;
+  renderPlanningIndiv();
+}
+
+// Aligne le vote du prochain match sur l'indisponibilité si le sondage est déjà ouvert.
+function syncAutoVoteForNextMatch(flags) {
+  var m = getNextMatch();
+  var mid = getMatchId(m);
+  var pid = currentUser.id;
+  var cutoff = new Date(m.date); cutoff.setHours(18,0,0,0);
+  if (new Date() >= cutoff) return Promise.resolve();
+  return db.ref('matches/' + mid + '/notifiedAt').once('value').then(function(ns) {
+    if (!ns.val()) return null; // sondage pas encore ouvert : le bot s'en chargera
+    var vref = db.ref('matches/' + mid + '/votes/' + pid);
+    return vref.once('value').then(function(vs) {
+      var cur = vs.val();
+      if (flags[mid]) {
+        if (cur && cur.auto) return null;
+        return vref.set({ choice: 'pd', auto: true, timestamp: firebase.database.ServerValue.TIMESTAMP });
+      }
+      if (cur && cur.auto) return vref.remove();
+      return null;
+    });
+  });
+}
+
+function saveIndispo() {
+  if (!currentUser || indispoSaving || !indispoIsDirty()) return;
+  var out = indispoClean(indispoPending);
+  indispoSaving = true; indispoMsg = null;
+  renderPlanningIndiv();
+  var ref = db.ref('unavailability/' + currentUser.id);
+  var write = Object.keys(out).length ? ref.set(out) : ref.remove();
+  write.then(function() {
+    return syncAutoVoteForNextMatch(out);
+  }).then(function() {
+    indispoSaving = false;
+    indispoSaved = indispoClean(out);
+    indispoPending = indispoClean(out);
+    indispoMsg = { type: 'ok', text: '✓ Indisponibilités enregistrées : ton vote sera pris en compte' };
+    if (indispoMsgTimer) clearTimeout(indispoMsgTimer);
+    indispoMsgTimer = setTimeout(function(){ indispoMsg = null; renderPlanningIndiv(); }, 8000);
+    renderPlanningIndiv();
+  }).catch(function(err) {
+    console.error('Enregistrement indisponibilités :', err);
+    indispoSaving = false;
+    indispoMsg = { type: 'err', text: "L'enregistrement a échoué. Vérifie ta connexion et réessaie." };
+    renderPlanningIndiv();
+  });
+}
+
 function renderPlanningIndiv() {
   if (!currentUser || (currentUser.isAdmin && currentUser.id === 0) || currentUser.isVisitor) {
     document.getElementById('planning-indiv').innerHTML = '<div class="card" style="text-align:center;color:var(--text2);font-size:13px;padding:20px;">Connectez-vous en tant que joueur pour voir votre planning.</div>';
     return;
   }
+  listenMyIndispo();
+  var now = new Date();
   var months = {};
   planning.forEach(function(m) {
     var key = m.date.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
     if (!months[key]) months[key] = [];
     var isIn = m.players.concat(m.goalkeepers).some(function(p){return p.id===currentUser.id;});
-    months[key].push({date:m.date, isIn:isIn});
+    var cutoff = new Date(m.date); cutoff.setHours(18,0,0,0);
+    months[key].push({date:m.date, isIn:isIn, id:getMatchId(m), editable: now < cutoff});
   });
-  document.getElementById('planning-indiv').innerHTML = Object.keys(months).map(function(month) {
+  var dirty = indispoIsDirty();
+  var html = '<div class="indispo-intro">Tu ne peux pas venir un mardi (blessure, déplacement…) ? Touche la date pour la cocher, puis appuie sur <strong>Enregistrer</strong>. Ton vote « Pas dispo » sera enregistré tout seul à l\'ouverture du sondage, tu pourras toujours le modifier.</div>'
+    + '<div class="indispo-dirty" id="indispo-dirty" style="'+(dirty?'display:block':'')+'">Modifications non enregistrées : pense à appuyer sur « Enregistrer » en bas de page.</div>';
+  html += Object.keys(months).map(function(month) {
     var pills = months[month].map(function(d) {
       var day = d.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric'});
       day = day.charAt(0).toUpperCase() + day.slice(1);
-      return '<div class="date-pill '+(d.isIn?'yes':'no')+'">'+(d.isIn?'&#10003;':'&#10007;')+' '+day+'</div>';
+      var on = !!indispoPending[d.id];
+      var pill = '<div class="date-pill '+(d.isIn?'yes':'no')+'">'+(d.isIn?'&#10003;':'&#10007;')+' '+day+'</div>';
+      var attrs = d.editable
+        ? ' role="button" tabindex="0" aria-pressed="'+on+'" aria-label="'+day+(on?' : indisponible':'')+'" onclick="toggleIndispo(\''+d.id+'\')"'
+        : '';
+      return '<div class="pill-wrap'+(d.editable?' editable':'')+(on?' indispo':'')+'"'+attrs+'>'+pill+(on?indispoBadgeSvg():'')+'</div>';
     }).join('');
     return '<div class="month-card"><div class="month-title">'+month+'</div><div class="dates-grid">'+pills+'</div></div>';
   }).join('');
+
+  // Bloc d'enregistrement
+  var savedFuture = planning.filter(function(m){ return indispoSaved[getMatchId(m)]; }).map(function(m){
+    var l = m.date.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+    return l.charAt(0).toUpperCase() + l.slice(1);
+  });
+  var statusHTML;
+  if (indispoMsg) {
+    statusHTML = '<div class="indispo-status" style="color:'+(indispoMsg.type==='ok'?'var(--green)':'var(--red)')+'">'+indispoMsg.text+'</div>';
+  } else if (dirty) {
+    statusHTML = '<div class="indispo-status" style="color:var(--amber)">Modifications non enregistrées</div>';
+  } else {
+    statusHTML = '';
+  }
+  var recap = savedFuture.length
+    ? '<div style="font-size:12px;color:var(--text2);text-align:center;margin-top:8px;line-height:1.5">Enregistré comme indisponible :<br><strong style="color:var(--text)">'+savedFuture.join(' · ')+'</strong></div>'
+    : '<div style="font-size:12px;color:var(--text3);text-align:center;margin-top:8px">Aucune indisponibilité enregistrée.</div>';
+  html += '<div class="month-card">'
+    + '<button class="indispo-save-btn" id="indispo-save-btn" onclick="saveIndispo()"'+((dirty&&!indispoSaving)?'':' disabled')+'>'
+    + (indispoSaving ? 'Enregistrement…' : 'Enregistrer mes indisponibilités') + '</button>'
+    + statusHTML + recap + '</div>';
+  document.getElementById('planning-indiv').innerHTML = html;
 }
 
 function openMatch(idx) {
