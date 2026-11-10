@@ -17,7 +17,7 @@
       --gold:#e8c14a; --gold-dim:#7a6030; --gold-bg:#1e1a0e;
       --text:#f0f0f0; --text2:#888; --text3:#555;
       --green:#4ade80; --green-bg:#0d2018;
-      --red:#f87171; --red-bg:#200d0d; --indispo-x:#0d0d0d;
+      --red:#f87171; --red-bg:#200d0d; --indispo-x:#0d0d0d; --badge-fill:#1b1b1b; --badge-cat:#d6d6d6; --badge-fl:#fb923c; --badge-fl2:#fbbf24;
       --amber:#fbbf24; --amber-bg:#201508;
       --purple:#e8c14a;
       --r-sm:8px; --r-md:12px; --r-lg:16px;
@@ -223,7 +223,7 @@
       --gold:#b8860b; --gold-dim:#c8a030; --gold-bg:#fef9e7;
       --text:#111827; --text2:#4a5568; --text3:#9ca3af;
       --green:#16a34a; --green-bg:#dcfce7;
-      --red:#dc2626; --red-bg:#fee2e2; --indispo-x:#ffffff;
+      --red:#dc2626; --red-bg:#fee2e2; --indispo-x:#ffffff; --badge-fill:#ffffff; --badge-cat:#e5e7eb; --badge-fl:#ea580c; --badge-fl2:#f59e0b;
       --amber:#d97706; --amber-bg:#fef3c7;
       --purple:#7c3aed;
       --teamWest:#b91c1c; --teamWest-bg:#fee2e2; --teamWestStar:#b91c1c;
@@ -761,7 +761,7 @@
 // IMPORTANT : mets aussi à jour CACHE_NAME dans public/sw.js avec la même
 // valeur — ça force le service worker à jeter l'ancien cache et à recharger
 // la nouvelle version chez tout le monde.
-var APP_VERSION = '1.5.261026';
+var APP_VERSION = '1.7.101126';
 document.addEventListener('DOMContentLoaded', function() {
   var vEl = document.getElementById('app-version-badge');
   if (vEl) vEl.textContent = 'Version ' + APP_VERSION;
@@ -1417,7 +1417,113 @@ function extFieldChoiceReset(slotIndex) {
   db.ref('matches/' + matchId + '/extFieldChoices/' + slotIndex).remove();
 }
 
+// ══ BADGES JOUEURS (logo à la place des initiales) ══
+// Calculés automatiquement d'après l'historique des matchs (equipesHistory) :
+//  - coupe : meilleur taux de victoires (victoires / matchs joués), parmi les joueurs qui ont joué
+//    au moins la moitié des matchs joués par le groupe (arrondi à l'entier inférieur : 9 matchs -> 4, 10 -> 5)
+//  - flammes : 2 à 5 victoires d'affilée (une flamme par victoire, 5 maximum)
+//  - chat noir : 3 défaites d'affilée (ou plus)
+// Un seul logo par joueur, par ordre de priorité : coupe, flammes, chat noir.
+// "D'affilée" = parmi les matchs que le joueur a réellement joués (une absence ne casse pas la série,
+// positive ou négative ; un match nul la casse dans les deux cas).
+var playerBadges = {};      // id (string) -> { kind:'cup'|'flames'|'cat', n }
+var badgeListenerStarted = false;
+
+function computePlayerBadgesFrom(hist, validIds) {
+  var played = hist.filter(function(m){
+    return m && m.teamA && m.teamB && typeof m.scoreA === 'number' && typeof m.scoreB === 'number';
+  }).sort(function(a, b){
+    return new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(); // du plus récent au plus ancien
+  });
+  var st = {};
+  played.forEach(function(m){
+    [[m.teamA, m.scoreA, m.scoreB], [m.teamB, m.scoreB, m.scoreA]].forEach(function(t){
+      var team = t[0];
+      var res = t[1] > t[2] ? 'W' : (t[1] < t[2] ? 'L' : 'D');
+      var ids = (team.players || []).slice();
+      if (team.keeper) ids.push(team.keeper);
+      ids.forEach(function(raw){
+        var id = String(raw);
+        if (validIds && !validIds[id]) return; // jokers / joueurs extérieurs ignorés
+        var s = st[id] || (st[id] = { played: 0, wins: 0, sw: 0, sl: 0, openW: true, openL: true });
+        s.played++;
+        if (res === 'W') s.wins++;
+        if (s.openW) { if (res === 'W') s.sw++; else s.openW = false; }
+        if (s.openL) { if (res === 'L') s.sl++; else s.openL = false; }
+      });
+    });
+  });
+  // Meilleur taux de victoires (ex æquo : tous l'ont). Seuil : la moitié des matchs joués, arrondie à l'inférieur.
+  var minPlayed = Math.max(1, Math.floor(played.length / 2));
+  var best = -1;
+  Object.keys(st).forEach(function(id){
+    if (st[id].played >= minPlayed) best = Math.max(best, st[id].wins / st[id].played);
+  });
+  var out = {};
+  Object.keys(st).forEach(function(id){
+    var s = st[id];
+    if (best >= 0 && s.played >= minPlayed && Math.abs(s.wins / s.played - best) < 1e-9) out[id] = { kind: 'cup', n: 0 };
+    else if (s.sw >= 2) out[id] = { kind: 'flames', n: Math.min(s.sw, 5) };
+    else if (s.sl >= 3) out[id] = { kind: 'cat', n: 0 };
+  });
+  return out;
+}
+
+function startBadgeListener() {
+  if (badgeListenerStarted || typeof db === 'undefined' || !db) return;
+  badgeListenerStarted = true;
+  db.ref('equipesHistory').on('value', function(snap) {
+    var v = snap.val() || {};
+    var hist = Object.keys(v).map(function(k){ return v[k]; });
+    var valid = {};
+    PLAYERS.forEach(function(p){ valid[String(p.id)] = true; });
+    playerBadges = computePlayerBadgesFrom(hist, valid);
+    if (typeof renderHome === 'function') renderHome();
+  }, function(err) { console.error('Firebase (badges) :', err); });
+}
+
+// Positions des flammes en couronne (viewBox 38×38, flammes debout)
+var BADGE_FLAME_RING = {
+  2: { k: 0.95, r: 8.5, a0: 90 },
+  3: { k: 0.72, r: 8,   a0: 0 },
+  4: { k: 0.62, r: 9.5, a0: 0 },
+  5: { k: 0.56, r: 10,  a0: 0 }
+};
+function badgeAvatarHtml(b, color) {
+  var label, inner = '', fill = 'var(--badge-fill)';
+  if (b.kind === 'cup') {
+    label = 'Meilleur taux de victoires';
+    inner = '<g transform="translate(5.8 5.4) scale(1.1)"><path d="M7 3.5h10v5.5a5 5 0 0 1-10 0z" fill="var(--gold)"/>'
+      + '<path d="M7 5.5H4v1.8A3.4 3.4 0 0 0 7.4 10.7M17 5.5h3v1.8a3.4 3.4 0 0 1-3.4 3.4" fill="none" stroke="var(--gold)" stroke-width="1.7" stroke-linecap="round"/>'
+      + '<path d="M12 14v3.8" stroke="var(--gold)" stroke-width="2" stroke-linecap="round"/>'
+      + '<path d="M8 20.5h8" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/>'
+      + '<path d="M9.3 5.5v3.2" stroke="#fff3c4" stroke-width="1.3" stroke-linecap="round"/></g>';
+  } else if (b.kind === 'flames') {
+    label = b.n + ' victoires d\'affilée';
+    var g = BADGE_FLAME_RING[b.n];
+    for (var i = 0; i < b.n; i++) {
+      var a = (g.a0 + (360 / b.n) * i) * Math.PI / 180;
+      var tx = (19 + g.r * Math.sin(a) - 12 * g.k).toFixed(2);
+      var ty = (19 - g.r * Math.cos(a) - 10.5 * g.k).toFixed(2);
+      inner += '<g transform="translate(' + tx + ' ' + ty + ') scale(' + g.k + ')">'
+        + '<path d="M12 2c.7 3.6 5.5 6 5.5 11.2A5.5 5.5 0 0 1 12 19a5.5 5.5 0 0 1-5.5-5.8c0-2.2 1.1-3.8 2.3-5 .2 1.9 1 3 2.2 3.4C10.6 8.4 10.7 5 12 2z" fill="var(--badge-fl)"/>'
+        + '<path d="M12 19a3 3 0 0 1-3-3.2c0-1.3.7-2.2 1.5-3 .2.9.6 1.5 1.3 1.9.3-1.2.6-2 1.3-2.9.8.9 1.9 2 1.9 4A3 3 0 0 1 12 19z" fill="var(--badge-fl2)"/></g>';
+    }
+  } else {
+    label = '3 défaites d\'affilée';
+    fill = 'var(--badge-cat)';
+    inner = '<g transform="translate(4.6 4.6) scale(1.2)"><path d="M8.5 7.4L8 3.6l3.2 1.9zM15.5 7.4L16 3.6l-3.2 1.9z" fill="#111827"/>'
+      + '<circle cx="12" cy="9" r="3.6" fill="#111827"/><ellipse cx="12" cy="16.6" rx="4.5" ry="5" fill="#111827"/>'
+      + '<path d="M16 19.8c2.4-.1 3.2-1.7 2.8-3.6" fill="none" stroke="#111827" stroke-width="1.8" stroke-linecap="round"/>'
+      + '<ellipse cx="10.6" cy="8.8" rx=".8" ry="1" fill="#facc15"/><ellipse cx="13.4" cy="8.8" rx=".8" ry="1" fill="#facc15"/></g>';
+  }
+  return '<div class="avatar" style="background:none;padding:0;">'
+    + '<svg width="38" height="38" viewBox="0 0 38 38" role="img" aria-label="' + label + '" style="display:block">'
+    + '<circle cx="19" cy="19" r="17.5" fill="' + fill + '" stroke="' + color + '" stroke-width="3"/>' + inner + '</svg></div>';
+}
+
 function renderHome() {
+  startBadgeListener();
   var m = getNextMatch();
   var all = PLAYERS; // tous les joueurs (prévus + non prévus) afin que tous les votes comptent
   var C = {present:0, pd:0, sb:0, wait:0};
@@ -1681,8 +1787,12 @@ function renderHome() {
     var isAuto = !!voteAuto[p.id] && v === 'pd';
     var indispoIcon = isAuto ? ' ' + indispoSvg(14, 'vertical-align:-3px;flex-shrink:0;') : '';
     var subExtra = isAuto ? ' &middot; indisponible, annoncé à l\'avance' : (tsStr ? ' &middot; '+tsStr : '');
+    var bdg = playerBadges[String(p.id)];
+    var avatarHtml = bdg
+      ? badgeAvatarHtml(bdg, p.color || 'var(--gold)')
+      : '<div class="avatar '+(isGoal?'av-goal':'')+'" style="'+avStyle+'">'+ini(p)+'</div>';
     return '<div class="player-row" onclick="openFiche('+p.id+')">'
-      + '<div class="avatar '+(isGoal?'av-goal':'')+'" style="'+avStyle+'">'+ini(p)+'</div>'
+      + avatarHtml
       + '<div class="p-info"><div class="p-name">'+formatName(p.prenom,p.nom)+plannedIcon+indispoIcon+'</div>'
       + '<div class="p-sub">'+(isGoal?'Gardien':'Joueur')+subExtra+'</div></div>'
       + '<span class="badge '+bm[0]+'">'+bm[1]+'</span>'
